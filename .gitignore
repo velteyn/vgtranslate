@@ -1,0 +1,8 @@
+#####
+*.pyc
+*.zip
+*.ztp
+*.out
+**/screenshots
+**/data
+vgtranslate/config.json

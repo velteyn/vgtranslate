@@ -23,10 +23,10 @@ EXAMPLE configurations for config.json:
 {
     "default_target": "En",
     "local_server_api_key_type": "google",
-    "local_server_ocr_key": "<google cloud vison api key>",
+    "local_server_ocr_key": "google cloud vison api key",
     "local_server_host": "localhost",
     "local_server_port": 4404,
-    "local_server_translation_key": "<google cloud translation api key>",
+    "local_server_translation_key": "google cloud translation api key",
     "local_server_enabled": true
 }
 

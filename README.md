@@ -7,6 +7,7 @@ USAGE:
 
 EXAMPLE configurations for config.json:
 
+```
 ### use ztranslate.net
 {
     "server_host": "ztranslate.net",
@@ -18,7 +19,10 @@ EXAMPLE configurations for config.json:
     "user_api_key": "<ztranslate.net api key>",
     "local_server_enabled": true
 }
+```
 
+
+```
 ### use google ocr and translation
 {
     "default_target": "En",
@@ -29,9 +33,10 @@ EXAMPLE configurations for config.json:
     "local_server_translation_key": "google cloud translation api key",
     "local_server_enabled": true
 }
+```
 
+```
 ### use tesseract locally, and then google translate:
-
 {
     "default_target": "En",
     "local_server_api_key_type": "tess_google",
@@ -54,5 +59,6 @@ EXAMPLE configurations for config.json:
     "local_server_translation_key": "google cloud translation api key",
     "local_server_enabled": true
 }
+```
 
 

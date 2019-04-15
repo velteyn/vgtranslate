@@ -7,10 +7,18 @@ import threading
 import httplib
 import functools
 from util import load_image, image_to_string, fix_neg_width_height,\
-                 image_to_string_bmp, swap_red_blue
+                 image_to_string_bmp, swap_red_blue, segfill,\
+                 reduce_to_multi_color
 import screen_translate
 import imaging
+import ocr_tools
 from PIL import Image
+
+lang_2_to_3 = {
+  "ja": "jpn",
+  "de": "deu", 
+  "en": "eng"
+}
 
 """
 TODO:
@@ -78,9 +86,6 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if window_obj and config.local_server_api_key_type == "free":
             #TODO
             pass
-        elif window_obj and config.local_server_api_key_type == "tess_google":
-            #TODO
-            pass
         elif config.local_server_api_key_type == "ztranslate":
             image_object = load_image(image_data)
 
@@ -136,6 +141,31 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
             return {"image": image_to_string_bmp(output_image)}
 
+        elif config.local_server_api_key_type == "tess_google":
+            image_object = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
+            image_data = image_to_string(image_object)
+ 
+
+            api_translation_key = config.local_server_translation_key
+            ocr_processor = config.local_server_ocr_processor
+            data, source_lang = self.tess_ocr(image_data, source_lang, ocr_processor)
+        
+            data = self.translate_output(data, target_lang,
+                                         source_lang=source_lang,
+                                         google_translation_key=api_translation_key)
+            output_image = imaging.ImageModder.write(image_object, data, target_lang)
+            if window_obj:
+                window_obj.load_image_object(output_image)
+                window_obj.curr_image = imaging.ImageItterator.prev()
+ 
+            if pixel_format == "BGR": 
+                output_image = output_image.convert("RGB")
+                output_image = swap_red_blue(output_image)
+
+            return {"image": image_to_string_bmp(output_image)}
+
+
+
     def google_ocr(self, image_data, source_lang, ocr_api_key):
         doc = {
                "requests": [{
@@ -162,6 +192,43 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return output['responses'][0]['fullTextAnnotation'], output
         else:
             return {}, {}
+
+    def tess_ocr(self, image_data, source_lang, ocr_processor):
+        if isinstance(ocr_processor, basestring):
+            try:
+                f = json.loads(open(ocr_processor).read())
+            except:
+                raise
+        if ocr_processor.get("source_lang") and source_lang is None:
+            source_lang = ocr_processor['source_lang']
+
+        image = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
+        for step in ocr_processor['pipeline']:
+            kwargs = step['options']
+            if step['action'] == 'reduceToMultiColor':
+                image = reduce_to_multi_color(image, kwargs['base'],
+                                              kwargs['colors'],
+                                              kwargs['threshold'])
+            elif step['action'] == 'segFill':
+                image = util.segfill(image, kwargs['base'], kwargs['color'])
+
+        data = ocr_tools.tess_helper_data(image, lang=source_lang,
+                                          mode=6, min_pixels=1)
+        for block in data['blocks']:
+            block['source_text'] = block['text']
+            block['language'] = source_lang
+            block['translation'] = ""
+            block['text_colors'] = ["FFFFFF"]
+            bb = block['bounding_box']
+            nb = dict()
+            nb['x'] = bb['x1']
+            nb['y'] = bb['y1']
+            nb['w'] = bb['x2']-bb['x1']
+            nb['h'] = bb['y2']-bb['y1']
+            block['bounding_box'] = nb
+            
+
+        return data, source_lang
 
     def process_output(self, data, raw_data, image_data, source_lang=None):
         text_colors = list()
@@ -203,6 +270,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 results['blocks'].append(this_block)
         return results
 
+
     def translate_output(self, data, target_lang, source_lang=None, google_translation_key=None):
         translates = self.google_translate([x['source_text'] for x in\
                                             data['blocks']], target_lang,
@@ -215,7 +283,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     translates['data']['translations'][i]['translatedText']
             block['target_lang'] = target_lang
             block['language'] = translates['data']['translations'][i]['detectedSourceLanguage']
-            if source_lang and source_lang != block['language']:
+            if source_lang and source_lang != lang_2_to_3.get(block['language'], ""):
                 continue
             new_blocks.append(block)
         data['blocks'] = new_blocks
@@ -224,7 +292,11 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def google_translate(self, strings, target_lang, google_translation_key):
         uri = "/language/translate/v2?key="
         uri+= google_translation_key
-
+        for s in strings:
+            try:
+                print s
+            except:
+                pass
         body = '{\n'
         for string in strings:
             body += "'q': "+json.dumps(string)+",\n"
@@ -233,6 +305,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         data = self._send_request("translation.googleapis.com", 443, uri, "POST", body)
         output = json.loads(data)
+        print "==========="
 
         if "error" in output:
             print output['error']
@@ -240,6 +313,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         for x in output['data']['translations']:
             x['translatedText'] = HTMLParser.HTMLParser().unescape(x['translatedText'])
+            try:
+                print x['translatedText']
+            except:
+                pass
         
         pairs = [[strings[i], output['data']['translations'][i]['translatedText']] for i in range(len(strings))]
         for intext, outtext in pairs:

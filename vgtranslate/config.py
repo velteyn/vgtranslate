@@ -11,6 +11,7 @@ local_server_port = 4404
 local_server_ocr_key = ""
 local_server_translation_key = ""
 local_server_api_key_type = "google"
+local_server_ocr_processor = ""
 
 def load_init():
     global server_host
@@ -23,6 +24,7 @@ def load_init():
     global local_server_ocr_key
     global local_server_translation_key
     global local_server_api_key_type
+    global local_server_ocr_processor
 
     try:
         config_file = json.loads(open("./config.json").read())
@@ -53,6 +55,10 @@ def load_init():
         local_server_translation_key = config_file['local_server_translation_key']
     if "local_server_api_key_type" in config_file:
         local_server_api_key_type = config_file['local_server_api_key_type']
+
+    if "local_server_ocr_processor" in config_file:
+        local_server_ocr_processor = config_file['local_server_ocr_processor']
+
 
     print "config loaded"
     print "===================="

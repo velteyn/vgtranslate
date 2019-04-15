@@ -30,3 +30,29 @@ EXAMPLE configurations for config.json:
     "local_server_enabled": true
 }
 
+### use tesseract locally, and then google translate:
+
+{
+    "default_target": "En",
+    "local_server_api_key_type": "tess_google",
+    "local_server_host": "localhost",
+    "local_server_ocr_processor": {
+      "source_lang": "jpn",
+      "pipeline": [
+        {"action": "reduceToMultiColor",
+         "options": {
+           "base": "000000",
+           "colors": [
+             ["FFFFFF", "FFFFFF"]
+           ],
+           "threshold": 32
+         }
+        }
+      ]
+    },
+    "local_server_port": 4404,
+    "local_server_translation_key": "google cloud translation api key",
+    "local_server_enabled": true
+}
+
+

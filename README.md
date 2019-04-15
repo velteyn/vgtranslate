@@ -7,8 +7,8 @@ USAGE:
 
 EXAMPLE configurations for config.json:
 
-```
 ### use ztranslate.net
+```
 {
     "server_host": "ztranslate.net",
     "server_port": 443,
@@ -22,8 +22,8 @@ EXAMPLE configurations for config.json:
 ```
 
 
-```
 ### use google ocr and translation
+```
 {
     "default_target": "En",
     "local_server_api_key_type": "google",
@@ -35,8 +35,8 @@ EXAMPLE configurations for config.json:
 }
 ```
 
-```
 ### use tesseract locally, and then google translate:
+```
 {
     "default_target": "En",
     "local_server_api_key_type": "tess_google",

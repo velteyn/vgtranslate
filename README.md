@@ -8,6 +8,7 @@ USAGE:
 EXAMPLE configurations for config.json:
 
 ### use ztranslate.net
+```
 {
     "server_host": "ztranslate.net",
     "server_port": 443,
@@ -18,8 +19,11 @@ EXAMPLE configurations for config.json:
     "user_api_key": "<ztranslate.net api key>",
     "local_server_enabled": true
 }
+```
+
 
 ### use google ocr and translation
+```
 {
     "default_target": "En",
     "local_server_api_key_type": "google",
@@ -29,4 +33,32 @@ EXAMPLE configurations for config.json:
     "local_server_translation_key": "google cloud translation api key",
     "local_server_enabled": true
 }
+```
+
+### use tesseract locally, and then google translate:
+```
+{
+    "default_target": "En",
+    "local_server_api_key_type": "tess_google",
+    "local_server_host": "localhost",
+    "local_server_ocr_processor": {
+      "source_lang": "jpn",
+      "pipeline": [
+        {"action": "reduceToMultiColor",
+         "options": {
+           "base": "000000",
+           "colors": [
+             ["FFFFFF", "FFFFFF"]
+           ],
+           "threshold": 32
+         }
+        }
+      ]
+    },
+    "local_server_port": 4404,
+    "local_server_translation_key": "google cloud translation api key",
+    "local_server_enabled": true
+}
+```
+
 

@@ -110,7 +110,7 @@ layerNames = [
 # load the pre-trained EAST text detector
 print("[INFO] loading EAST text detector...")
 net = cv2.dnn.readNet(args["east"])
-
+t_time = time.time()
 # construct a blob from the image and then perform a forward pass of
 # the model to obtain the two output layer sets
 blob = cv2.dnn.blobFromImage(image, 1.0, (W, H),

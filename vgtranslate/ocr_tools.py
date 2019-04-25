@@ -228,7 +228,7 @@ def tess_helper_data_linux(image, lang=None, mode=None, min_pixels=1):
     pc = get_color_counts_simple(image, ["FFFFFF"], 2)
 
     if min_pixels and pc < min_pixels:
-        return list()
+        return {"blocks": []}
 
     config_arg = ""
     if mode is not None:
@@ -318,7 +318,7 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
     pc = get_color_counts_simple(image, ["FFFFFF"], 2)
 
     if min_pixels and pc < min_pixels:
-        return list()
+        return {"blocks": []}
     x = pyocr_util.image_to_data(image, lang=lang, mode=mode)
     print ['ocr time', time.time()-t_]
 

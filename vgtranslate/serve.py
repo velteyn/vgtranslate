@@ -44,7 +44,7 @@ server_thread = None
 httpd_server = None
 window_obj =  None
 
-g_debug_mode = True
+g_debug_mode = 0
 
 class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):

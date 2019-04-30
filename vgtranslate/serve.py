@@ -12,6 +12,7 @@ from util import load_image, image_to_string, fix_neg_width_height,\
 import screen_translate
 import imaging
 import ocr_tools
+import sys
 from PIL import Image
 
 lang_2_to_3 = {
@@ -42,6 +43,8 @@ TODO:
 server_thread = None
 httpd_server = None
 window_obj =  None
+
+g_debug_mode = True
 
 class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -210,8 +213,12 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                               kwargs['colors'],
                                               kwargs['threshold'])
             elif step['action'] == 'segFill':
-                image = util.segfill(image, kwargs['base'], kwargs['color'])
+                image = segfill(image, kwargs['base'], kwargs['color'])
+            if g_debug_mode == 2:
+                image.show()
 
+        if g_debug_mode == 1:
+            image.show()
         data = ocr_tools.tess_helper_data(image, lang=source_lang,
                                           mode=6, min_pixels=1)
         for block in data['blocks']:
@@ -366,12 +373,18 @@ def start_api_server2():
 
  
 def main():
+    global g_debug_mode
     if not config.load_init():
         return
     host = config.local_server_host
     port = config.local_server_port 
     server_class = BaseHTTPServer.HTTPServer
     httpd = server_class((host, port), APIHandler)
+    if "--debug-extra" in sys.argv:
+        g_debug_mode = 2
+    elif "--debug" in sys.argv:
+        g_debug_mode = 1
+
     print "server start"
     try:
         httpd.serve_forever()

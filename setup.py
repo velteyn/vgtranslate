@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 __VERSION__ = "1.0.0"
 
 def main(args=None):
-    README = open("./README").read()
+    README = open("./README.md").read()
 
     setup_required_packages = []
 

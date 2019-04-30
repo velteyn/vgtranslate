@@ -171,7 +171,7 @@ def reduce_to_multi_color(img, bg, colors_map, threshold):
 
     def vsub(a, b):
         return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]
-
+    img = img.convert("P", palette=Image.ADAPTIVE)
     new_palette = list()
     p = img.getpalette()
     if bg is not None:

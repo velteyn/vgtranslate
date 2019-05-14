@@ -1,6 +1,6 @@
 # VGTranslate
 
-Lightweight server for doing OCR and machine translation on game screen captures.  Suitable as an endpoint for real time usage, and can act as an open-source alternative to the ztranslate client.  Uses python3.  Licensed under GNU GPLv3.
+Lightweight server for doing OCR and machine translation on game screen captures.  Suitable as an endpoint for real time usage, and can act as an open-source alternative to the ztranslate client.  Uses python 2.7.  Licensed under GNU GPLv3.
 
 USAGE:
     copy `default_config.json` to `config.json` and modify the configuration to point to the OCR/MT apis you want to use (see below).  Run `python setup.py install` to install the required packages (preferably in a virtualenv), and then run `python serve.py` in the vgtranslate directory.

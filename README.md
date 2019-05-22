@@ -40,7 +40,7 @@ Lightweight server for doing OCR and machine translation on game screen captures
 }
 ```
 
-### use tesseract locally, and then google translate:
+### use tesseract locally, and then google translate (experimental):
 ```
 {
     "default_target": "En",

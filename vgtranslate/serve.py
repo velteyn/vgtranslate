@@ -31,24 +31,6 @@ lang_2_to_3 = {
   "ru": "rus"
 }
 
-"""
-TODO:
-  -tuneable settings in config.
-   -local_server_enabled: false/true
-   -local_server_host: "localhost"
-   -local_server_port: 4444
-   -local_server_ztranslate_api_key: ""
-   -local_server_google_api_key: ""
-  -use currently loaded package if loaded.
-   -pass in variable for http server to use to get real-time package info
-    -if present, do the ocr pipeline stuff
-    -if not, pretend this is just like it's going to the public server.
-
-
-   -take url and get the target language, etc.
-
-
-"""
 
 server_thread = None
 httpd_server = None

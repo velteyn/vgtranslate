@@ -1,4 +1,5 @@
 import json
+import imaging
 
 server_host = "ztranslate"
 server_port = 8888
@@ -13,6 +14,8 @@ local_server_translation_key = ""
 local_server_api_key_type = "google"
 local_server_ocr_processor = ""
 
+font = "RobotoCondensed-Bold.tff"
+
 def load_init():
     global server_host
     global server_port
@@ -25,6 +28,7 @@ def load_init():
     global local_server_translation_key
     global local_server_api_key_type
     global local_server_ocr_processor
+    global font
 
     try:
         config_file = json.loads(open("./config.json").read())
@@ -59,7 +63,9 @@ def load_init():
     if "local_server_ocr_processor" in config_file:
         local_server_ocr_processor = config_file['local_server_ocr_processor']
 
-
+    if "font" in config_file:
+        font = config_file['font']
+    imaging.load_font(font)
     print "config loaded"
     print "===================="
     #print user_api_key
@@ -75,7 +81,8 @@ def write_init():
            "local_server_port": local_server_port,
            "local_server_ocr_key": local_server_ocr_key,
            "local_server_translation_key": local_server_translation_key,
-           "local_server_api_key_type": local_server_api_key_type
+           "local_server_api_key_type": local_server_api_key_type,
+           "font": font
     }
     config_file = open("./config.json", "w")
     config_file.write(json.dumps(obj, indent=4))

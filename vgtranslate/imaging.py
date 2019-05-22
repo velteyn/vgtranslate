@@ -4,9 +4,22 @@ import datetime
 import time
 from util import color_hex_to_byte
 
+
 FONT = "RobotoCondensed-Bold.ttf"
-FONTS = [ImageFont.truetype("./fonts/"+FONT, x+8) for x in range(32)]
+FONTS = list()
 FONTS_WH = list()
+
+
+def load_font(font_name):
+    global FONT
+    global FONTS
+    global FONTS_WH
+
+    FONT = font_name
+    FONTS = [ImageFont.truetype("./fonts/"+FONT, x+8) for x in range(32)]
+    FONTS_WH = list()
+    fill_fonts_wh()
+
 
 def fill_fonts_wh():
     global FONTS_WH
@@ -40,8 +53,6 @@ def fill_fonts_wh():
 
     draw = ImageDraw.Draw(test)
 
-
-fill_fonts_wh()
 
 
 def wrap_text(text, font, draw, w):

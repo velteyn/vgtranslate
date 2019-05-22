@@ -10,7 +10,8 @@ Lightweight server for doing OCR and machine translation on game screen captures
 4. Run `python setup.py install` in the base folder to install the required packages (in a virtualenv).
 5. Run `python serve.py` in the vgtranslate directory.
   
-#Example configurations for config.json:
+
+# Example configurations for config.json:
 
 ### use ztranslate.net
 ```

@@ -2,7 +2,7 @@
 
 Lightweight server for doing OCR and machine translation on game screen captures.  Suitable as an endpoint for real time usage, and can act as an open-source alternative to the ztranslate client.  Uses python 2.7.  Licensed under GNU GPLv3.
 
-#Installation
+# Installation
 
 1. Download this repo and extract it.  If you have git you can do: `git clone https://gitlab.com/spherebeaker/vgtranslate.git` instead.
 2. Copy `default_config.json` to `config.json` (in the vgtranslate folder) and modify the configuration to point to the OCR/MT apis you want to use (see the Examples section below).

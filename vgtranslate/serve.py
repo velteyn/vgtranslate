@@ -15,10 +15,20 @@ import ocr_tools
 import sys
 from PIL import Image
 
+#dictionary going from ISO-639-1 to ISO-639-2/T language codes (mostly):
 lang_2_to_3 = {
   "ja": "jpn",
   "de": "deu", 
-  "en": "eng"
+  "en": "eng",
+  "es": "spa",
+  "fr": "fra",
+  "zh": "zho",
+  "zh-CN": "zho",#BCP-47
+  "zh-TW": "zho",#BCP-47
+  "nl": "nld",
+  "it": "ita",
+  "pt": "por",
+  "ru": "rus"
 }
 
 """
@@ -76,10 +86,11 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _process_request(self, body):
         source_lang = body.get('source_lang')
         target_lang = body.get("target_lang", "en")
+        request_output = ['image', 'sound']
         #pixel_format = body.get("pixel_format", "RGB")
         pixel_format = "RGB"
         image_data = body.get("image")
-    
+        
         image_object = load_image(image_data).convert("RGB")
         if pixel_format == "BGR": 
             image_object = image_object.convert("RGB")
@@ -133,7 +144,12 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                          source_lang=source_lang,
                                          google_translation_key=api_translation_key)
             output_image = imaging.ImageModder.write(image_object, data, target_lang)
-            
+         
+            output_data = {}
+            if "speech" in request_output:
+                mp3_out = cls.text_to_speech(data)
+                output_data['sound'] = mp3_out
+
             if window_obj:
                 window_obj.load_image_object(output_image)
                 window_obj.curr_image = imaging.ImageItterator.prev()
@@ -142,7 +158,8 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 output_image = output_image.convert("RGB")
                 output_image = swap_red_blue(output_image)
 
-            return {"image": image_to_string_bmp(output_image)}
+            output_data["image"] = image_to_string_bmp(output_image)
+            return output_data
 
         elif config.local_server_api_key_type == "tess_google":
             image_object = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
@@ -168,6 +185,22 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return {"image": image_to_string_bmp(output_image)}
 
 
+    def text_to_speech(cls, data):
+        texts = list()
+        i = 0
+        for block in sorted(data['blocks'], key=lambda x: (x['bounding_box']['y'], x['bounding_box']['x'])):
+            i+=1
+            this_text = block['translation'][block['target_lang'].lower()]
+            this_text = "Textbox "+(i+1)+": "+"[] "*3 + this_text + " "+"[] "*6
+            texts.append(this_text)
+
+        
+        text_to_say = "".join(texts).replace('"', " [] ")
+        cmd = "espeak "+'"'+text_to_say+'"'+" --stdout | ffmpeg -i - -ar 44100 -ac 2 -ab 192k -f mp3 tts_out.mp3"
+        os.system(cmd, shell=True)
+        mp3_data = open(tts_out.mp3).read()
+        mp3_data = base64.b64encode(mp3_data)
+        return mp3_data
 
     def google_ocr(self, image_data, source_lang, ocr_api_key):
         doc = {
@@ -239,7 +272,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def process_output(self, data, raw_data, image_data, source_lang=None):
         text_colors = list()
-        for entry in raw_data['responses']:
+        for entry in raw_data.get('responses', []):
             for page in entry['fullTextAnnotation']['pages']:
                 for block in page['blocks']:
                     text_colors.append(['ffffff'])

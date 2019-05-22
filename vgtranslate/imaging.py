@@ -102,7 +102,8 @@ def drawTextBox(draw, text, x,y, w, h, font=None, font_size=None, font_color=Non
         outtext = wrap_text(text, FONTS[i], draw, w)
         tw, th = get_text_wh(outtext, FONTS[i], draw, w)
 
-        if th <= h and exact_font is None:
+        if th <= h and tw < max(16, 2*w) and exact_font is None:
+            #the tw requirement is less strict for cases of vertical text.
             succ = outtext
             succ_f = FONTS[i]
         else:

@@ -15,6 +15,7 @@ from util import load_image, image_to_string, fix_neg_width_height,\
 import screen_translate
 import imaging
 import ocr_tools
+from text_to_speech import TextToSpeech
 import sys
 from PIL import Image
 
@@ -34,6 +35,7 @@ lang_2_to_3 = {
   "ru": "rus"
 }
 
+USE_ESPEAK = False
 
 server_thread = None
 httpd_server = None
@@ -51,7 +53,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         
     def do_POST(self):
         query = urlparse.urlparse(self.path).query
-        query_components = dict(qc.split("=") for qc in query.split("&"))
+        if query.strip():
+            query_components = dict(qc.split("=") for qc in query.split("&"))
+        else:
+            query_components = {}
         content_length = int(self.headers.getheader('content-length', 0))
         data = self.rfile.read(content_length);
         print content_length

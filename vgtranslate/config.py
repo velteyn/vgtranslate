@@ -14,7 +14,7 @@ local_server_translation_key = ""
 local_server_api_key_type = "google"
 local_server_ocr_processor = ""
 
-font = "RobotoCondensed-Bold.tff"
+font = "RobotoCondensed-Bold.ttf"
 
 def load_init():
     global server_host
@@ -65,6 +65,7 @@ def load_init():
 
     if "font" in config_file:
         font = config_file['font']
+    print "using font: "+font
     imaging.load_font(font)
     print "config loaded"
     print "===================="

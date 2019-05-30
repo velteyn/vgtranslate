@@ -6,6 +6,9 @@ import config
 import threading
 import httplib
 import functools
+import urlparse
+import os
+import base64
 from util import load_image, image_to_string, fix_neg_width_height,\
                  image_to_string_bmp, swap_red_blue, segfill,\
                  reduce_to_multi_color
@@ -47,6 +50,8 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write("<body>yo!</body></html>")
         
     def do_POST(self):
+        query = urlparse.urlparse(self.path).query
+        query_components = dict(qc.split("=") for qc in query.split("&"))
         content_length = int(self.headers.getheader('content-length', 0))
         data = self.rfile.read(content_length);
         print content_length
@@ -54,7 +59,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         
         start_time = time.time()
 
-        result = self._process_request(data)
+        result = self._process_request(data, query_components)
         print ['Request took: ', time.time()-start_time]
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -65,11 +70,14 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         print "Output length: "+str(len(output))
         self.wfile.write(output)
 
-    def _process_request(self, body):
-        source_lang = body.get('source_lang')
-        target_lang = body.get("target_lang", "en")
-        request_output = ['image', 'sound']
+    def _process_request(self, body, query):
+        source_lang = query.get("source_lang")
+        target_lang = query.get("target_lang", "en")
+        request_output = query.get("output", "image,sound")
+        request_output = request_output.split(",")
+        print request_output
         #pixel_format = body.get("pixel_format", "RGB")
+
         pixel_format = "RGB"
         image_data = body.get("image")
         
@@ -113,6 +121,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 window_obj.curr_image = imaging.ImageItterator.prev()
             return result
         elif config.local_server_api_key_type == "google":
+            print "using googl......"
             image_object = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
             image_data = image_to_string(image_object)
 
@@ -128,8 +137,8 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             output_image = imaging.ImageModder.write(image_object, data, target_lang)
          
             output_data = {}
-            if "speech" in request_output:
-                mp3_out = cls.text_to_speech(data)
+            if "sound" in request_output:
+                mp3_out = self.text_to_speech(data)
                 output_data['sound'] = mp3_out
 
             if window_obj:
@@ -167,22 +176,43 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return {"image": image_to_string_bmp(output_image)}
 
 
-    def text_to_speech(cls, data):
+    def text_to_speech(self, data):
         texts = list()
         i = 0
         for block in sorted(data['blocks'], key=lambda x: (x['bounding_box']['y'], x['bounding_box']['x'])):
             i+=1
             this_text = block['translation'][block['target_lang'].lower()]
-            this_text = "Textbox "+(i+1)+": "+"[] "*3 + this_text + " "+"[] "*6
+            this_text = "Textbox "+str(i)+": "+"[] "*3 + this_text + " "+"[] "*6
             texts.append(this_text)
 
         
         text_to_say = "".join(texts).replace('"', " [] ")
-        cmd = "espeak "+'"'+text_to_say+'"'+" --stdout | ffmpeg -i - -ar 44100 -ac 2 -ab 192k -f mp3 tts_out.mp3"
-        os.system(cmd, shell=True)
-        mp3_data = open(tts_out.mp3).read()
-        mp3_data = base64.b64encode(mp3_data)
-        return mp3_data
+        cmd = "espeak "+'"'+text_to_say+'"'+" --stdout > tts_out.wav"
+
+        os.system(cmd)#, shell=True)
+        wav_data = open("tts_out.wav").read()
+        wav_data = self.fix_wav_size(wav_data)
+        wav_data = base64.b64encode(wav_data)
+        return wav_data
+
+    def fix_wav_size(self, wav):
+        def tb(size):
+            bs = size%256, int(size/256)%256, int(size/(256**2))%256, int(size/(256**3))%256
+            return bytearray(bs)
+        size1 = tb(len(wav))
+        size2 = tb(len(wav)-44)
+        s = bytearray(wav)
+        s[4]=size1[0]
+        s[5]=size1[1]
+        s[6]=size1[2]
+        s[7]=size1[3]
+
+        s[40]=size2[0]
+        s[41]=size2[1]
+        s[42]=size2[2]
+        s[43]=size2[3]
+        return str(s)
+
 
     def google_ocr(self, image_data, source_lang, ocr_api_key):
         doc = {

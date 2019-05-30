@@ -178,19 +178,24 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def text_to_speech(self, data):
         texts = list()
+        texts2 = list()
         i = 0
         for block in sorted(data['blocks'], key=lambda x: (x['bounding_box']['y'], x['bounding_box']['x'])):
             i+=1
-            this_text = block['translation'][block['target_lang'].lower()]
-            this_text = "Textbox "+str(i)+": "+"[] "*3 + this_text + " "+"[] "*6
+            text = block['translation'][block['target_lang'].lower()]
+            this_text = "Textbox "+str(i)+": "+"[] "*3 + text + " "+"[] "*6
             texts.append(this_text)
+            texts2.append(text)
 
-        
-        text_to_say = "".join(texts).replace('"', " [] ")
-        cmd = "espeak "+'"'+text_to_say+'"'+" --stdout > tts_out.wav"
+        if USE_ESPEAK:
+            text_to_say = "".join(texts).replace('"', " [] ")
+            cmd = "espeak "+'"'+text_to_say+'"'+" --stdout > tts_out.wav"
+            os.system(cmd)#, shell=True)
+            wav_data = open("tts_out.wav").read()
+        else:
+            text_to_say = "".join(texts2).replace('"', " [] ")
+            wav_data = TextToSpeech.text_to_speech_api(text_to_say)
 
-        os.system(cmd)#, shell=True)
-        wav_data = open("tts_out.wav").read()
         wav_data = self.fix_wav_size(wav_data)
         wav_data = base64.b64encode(wav_data)
         return wav_data

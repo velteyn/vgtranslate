@@ -78,6 +78,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _process_request(self, body, query):
         source_lang = query.get("source_lang")
         target_lang = query.get("target_lang", "en")
+        
         request_output = query.get("output", "image,sound")
         request_output = request_output.split(",")
         print request_output
@@ -126,9 +127,15 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 window_obj.curr_image = imaging.ImageItterator.prev()
             return result
         elif config.local_server_api_key_type == "google":
-            print "using googl......"
-            image_object = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
+            print "using google......"
+            if "image" not in request_output:
+                image_object = load_image(image_data).convert("LA").convert("RGB")
+                image_object = image_object.convert("P", palette=Image.ADAPTIVE, colors=32)
+            else:
+                image_object = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
+
             image_data = image_to_string(image_object)
+            print len(image_data)
 
             api_ocr_key = config.local_server_ocr_key
             api_translation_key = config.local_server_translation_key
@@ -139,8 +146,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             data = self.translate_output(data, target_lang,
                                          source_lang=source_lang,
                                          google_translation_key=api_translation_key)
-            output_image = imaging.ImageModder.write(image_object, data, target_lang)
-         
+        
             output_data = {}
             if "sound" in request_output:
                 mp3_out = self.text_to_speech(data)
@@ -149,12 +155,15 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if window_obj:
                 window_obj.load_image_object(output_image)
                 window_obj.curr_image = imaging.ImageItterator.prev()
- 
-            if pixel_format == "BGR": 
-                output_image = output_image.convert("RGB")
-                output_image = swap_red_blue(output_image)
 
-            output_data["image"] = image_to_string_bmp(output_image)
+            if "image" in request_output:
+                output_image = imaging.ImageModder.write(image_object, data, target_lang)
+ 
+                if pixel_format == "BGR": 
+                    output_image = output_image.convert("RGB")
+                    output_image = swap_red_blue(output_image)
+
+                output_data["image"] = image_to_string_bmp(output_image)
             return output_data
 
         elif config.local_server_api_key_type == "tess_google":
@@ -198,7 +207,8 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             os.system(cmd)#, shell=True)
             wav_data = open("tts_out.wav").read()
         else:
-            text_to_say = "".join(texts2).replace('"', " [] ")
+            text_to_say = " ".join(texts2).replace("...", " [] ").replace(" ' s ", "'s ").replace(" ' t ", "'t ").replace(" ' re ", "'re ").replace(" ' m ", "'m ").replace("' ", "").replace(" !", "!").replace('"', " [] ")
+            print [text_to_say]
             wav_data = TextToSpeech.text_to_speech_api(text_to_say)
 
         wav_data = self.fix_wav_size(wav_data)
@@ -334,9 +344,14 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
     def translate_output(self, data, target_lang, source_lang=None, google_translation_key=None):
-        translates = self.google_translate([x['source_text'] for x in\
-                                            data['blocks']], target_lang,
-                                           google_translation_key=google_translation_key)
+        if target_lang:
+            translates = self.google_translate([x['source_text'] for x in\
+                                                data['blocks']], target_lang,
+                                               google_translation_key=google_translation_key)
+
+        else:
+            translates = {"data": {"translations": [{"translatedText": x['source_text'], "detectedSourceLanguage": "En"} for x in data['blocks']]}}
+            print [x['translatedText'] for x in translates['data']['translations']]
         new_blocks = list()
         for i, block in enumerate(data['blocks']):
             if not 'translation' in block or isinstance(block['translation'], basestring):

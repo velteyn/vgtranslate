@@ -9,11 +9,27 @@ Lightweight server for doing OCR and machine translation on game screen captures
 3. Install python (v2.7) to your system.
 4. Run `python setup.py install` in the base folder to install the required packages (in a virtualenv).
 5. Run `python serve.py` in the vgtranslate directory.
-  
+
+If you have trouble running the above code on windows, you can try running a pre-build release:
+
+1. Download a release under "releases"
+2. Change the `config.json` as in the above.
+3. Run `serve.exe`.
+
+If you run into trouble, you can join the RetroArch discord or the ZTranslate discord ( https://ztranslate.net/community ) and ask @Beaker for help.
+
 
 # Example configurations for config.json:
 
-### use ztranslate.net
+You can use either use Google API keys yourself to run vgtranslate, or use an account with the ztranslate.net service.  The ZTranslate service in this case basically acts like a standalone vgtranslate server that's setup with it's own Google API keys.  The main purpose being that you can try out vgtranslate without having to sign up to Google Cloud first, and getting some savings with a volume discount on the Google Cloud api calls.  To get an API key for ZTranslate, go to https://ztranslate.net , sign up, and go to the Settings page.  The ZTranslate API key will be at the bottom.
+
+As of writing, ztranslate.net allows 1000 calls per month for free, while if you sign up for Google Cloud, you get $300 worth of API credits.  Each vgtranslate call costs about 0.2-0.3 cents, so it makes sense to use the Google API keys directly instead of pooling then with ZTranslate, at least at first.
+
+See: https://cloud.google.com/billing/docs/how-to/manage-billing-account about how to create a Google Cloud account and https://cloud.google.com/docs/authentication/api-keys about creating Google Cloud API keys
+
+If using Google Cloud keys, be sure to set the API key to not have restricted APIs at all, or at least include the Cloud Vision API, Cloud Translation API, and Cloud Text-to-Speech API in the list of allowed APIs. 
+
+### Using ztranslate.net
 ```
 {
     "server_host": "ztranslate.net",
@@ -26,7 +42,6 @@ Lightweight server for doing OCR and machine translation on game screen captures
     "local_server_enabled": true
 }
 ```
-
 
 ### use google ocr and translation
 ```

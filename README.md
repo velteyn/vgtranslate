@@ -43,7 +43,7 @@ If using Google Cloud keys, be sure to set the API key to not have restricted AP
 }
 ```
 
-### use google ocr and translation
+### Using Google OCR and translation
 ```
 {
     "default_target": "En",
@@ -56,7 +56,7 @@ If using Google Cloud keys, be sure to set the API key to not have restricted AP
 }
 ```
 
-### use tesseract locally, and then google translate (experimental):
+### Using tesseract locally, and then Google translate (experimental):
 ```
 {
     "default_target": "En",

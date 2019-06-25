@@ -12,7 +12,7 @@ Lightweight server for doing OCR and machine translation on game screen captures
 
 If you have trouble running the above code on windows, you can try running a pre-build release:
 
-1. Download a release [here](https://ztranslate.net/download/vgtranslate_serve_v1.01.zip?owner=)
+1. Download a release here: [vgtranslate_server_v1.01.zip](https://ztranslate.net/download/vgtranslate_serve_v1.01.zip?owner=)
 2. Change the `config.json` as in the above.
 3. Run `serve.exe`.
 

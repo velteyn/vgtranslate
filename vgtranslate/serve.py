@@ -78,7 +78,8 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def _process_request(self, body, query):
         source_lang = query.get("source_lang")
         target_lang = query.get("target_lang", "en")
-        
+        mode = query.get("mode", "fast")
+
         request_output = query.get("output", "image,sound")
         request_output = request_output.split(",")
         print request_output
@@ -99,33 +100,20 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif config.local_server_api_key_type == "ztranslate":
             image_object = load_image(image_data)
 
-            if window_obj and window_obj.top_ui_mode.get() == "Fast":
-                fast = True
+            if "image" not in request_output and mode != "normal":
+                image_object = image_object.convert("LA").convert("RGB")
+                image_object = image_object.convert("P", palette=Image.ADAPTIVE, colors=32)
             else:
-                fast = False
+                image_object = image_object.convert("P", palette=Image.ADAPTIVE)
 
-            if window_obj and window_obj.top_ui_mode.get() == "Free":
-                free = True
-            else:
-                free = False
-
-            image_result, quota = screen_translate.CallScreenshots.call_screenshot(image_object,
-                                                                                   source_lang,
-                                                                                   target_lang,
-                                                                                   fast=fast,
-                                                                                   free=free)
-
-            if pixel_format == "BGR": 
-                image_result = image_result.convert("RGB")
-                image_result = swap_red_blue(image_result)
-            result = {"image": image_to_string_bmp(image_result)}
-            if window_obj:
-                if quota:
-                    window_obj.update_quota(quota)
-                #image_result is a temp image filename, with updated, translated text.
-                window_obj.load_image_object(image_result)
-                window_obj.curr_image = imaging.ImageItterator.prev()
-            return result
+            #pass the call onto the ztranslate service api...
+            image_data = image_to_string(image_object)
+            output = screen_translate.CallService.call_service(image_data, 
+                                                               source_lang, target_lang,
+                                                               mode=mode,
+                                                               request_output=request_output)
+            
+            return output
         elif config.local_server_api_key_type == "google":
             print "using google......"
             if "image" not in request_output:

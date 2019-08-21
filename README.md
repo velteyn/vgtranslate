@@ -10,7 +10,7 @@ Lightweight server for doing OCR and machine translation on game screen captures
 4. Run `python setup.py install` in the base folder to install the required packages (in a virtualenv).
 5. Run `python serve.py` in the vgtranslate directory.
 
-If you have trouble running the above code on windows, you can try running a pre-build release:
+If you have trouble running the above code on windows, you can try running a pre-built release:
 
 1. Download a release here: [vgtranslate_server_v1.01.zip](https://ztranslate.net/download/vgtranslate_serve_v1.01.zip?owner=)
 2. Change the `config.json` as in the above.

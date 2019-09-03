@@ -137,7 +137,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         
             output_data = {}
             if "sound" in request_output:
-                mp3_out = self.text_to_speech(data)
+                mp3_out = self.text_to_speech(data, target_lang=target_lang)
                 output_data['sound'] = mp3_out
 
             if window_obj:
@@ -178,7 +178,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return {"image": image_to_string_bmp(output_image)}
 
 
-    def text_to_speech(self, data):
+    def text_to_speech(self, data, target_lang=None):
         texts = list()
         texts2 = list()
         i = 0
@@ -197,7 +197,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             text_to_say = " ".join(texts2).replace("...", " [] ").replace(" ' s ", "'s ").replace(" ' t ", "'t ").replace(" ' re ", "'re ").replace(" ' m ", "'m ").replace("' ", "").replace(" !", "!").replace('"', " [] ")
             print [text_to_say]
-            wav_data = TextToSpeech.text_to_speech_api(text_to_say)
+            wav_data = TextToSpeech.text_to_speech_api(text_to_say, source_lang=target_lang)
 
         wav_data = self.fix_wav_size(wav_data)
         wav_data = base64.b64encode(wav_data)

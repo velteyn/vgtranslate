@@ -10,7 +10,9 @@ class TextToSpeech:
     @classmethod
     def text_to_speech_api(cls, text, name="", source_lang=None, async=False):
         voice, pitch, speed = cls.process_name_voice(name)
-
+        print("LANG", source_lang)
+        if source_lang is None:
+            source_lang = "en-US"
         t_time = time.time()
         uri = "/v1beta1/text:synthesize?key="
         uri+=config.local_server_ocr_key
@@ -24,10 +26,11 @@ class TextToSpeech:
                 "text": text
             },
             "voice": {
-                "languageCode": "en-US",
-                "name": voice,
+                "languageCode": source_lang,
             }
         }
+        if source_lang == "en-US":
+            doc['voice']['name'] = voice
         body = json.dumps(doc)
 
         conn = httplib.HTTPSConnection("texttospeech.googleapis.com", 443)

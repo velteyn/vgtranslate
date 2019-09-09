@@ -8,14 +8,20 @@ from util import color_hex_to_byte
 FONT = "RobotoCondensed-Bold.ttf"
 FONTS = list()
 FONTS_WH = list()
+FONT_SPLIT = " "
+OVERRIDE_FONT = False
 
-
-def load_font(font_name):
+def load_font(font_name, font_split=" ", font_override=False):
     global FONT
     global FONTS
     global FONTS_WH
-
+    global FONT_SPLIT
+    global OVERRIDE_FONT
+    FONT_SPLIT = font_split
+    
     FONT = font_name
+    OVERRIDE_FONT = font_override
+    print [FONT, OVERRIDE_FONT]
     FONTS = [ImageFont.truetype("./fonts/"+FONT, x+8) for x in range(32)]
     FONTS_WH = list()
     fill_fonts_wh()
@@ -36,7 +42,7 @@ def fill_fonts_wh():
         t = 0
         avg_w = 0
         avg_h = 0
-        for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz?!.,;'\"":
+        for char in u"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz?!.,;'\"\u624b":
             t+=1
             size_x, size_y = draw.textsize(char, font=FONTS[i])
             avg_w += size_x
@@ -56,17 +62,20 @@ def fill_fonts_wh():
 
 
 def wrap_text(text, font, draw, w):
-    words = text.split(" ")
+    if FONT_SPLIT:
+        words = text.split(FONT_SPLIT)
+    else:
+        words = [x for x in text]
     outline = ""
     outtext = ""
     for word in words:
         size = draw.textsize(outline+" "+word, font=font)
         if size[0] < w:
-            outline+=" "+word
+            outline+=FONT_SPLIT+word
         else:
             outtext+=outline+"\n"
             outline = word
-    outtext+=" "+outline
+    outtext+=FONT_SPLIT+outline
     return outtext.strip()
 
 def get_approximate_font(text, w, h):
@@ -74,7 +83,11 @@ def get_approximate_font(text, w, h):
     for i in range(32):
         curr_x = 0
         curr_y = FONTS_WH[i][1]
-        for word in text.split():
+        if FONT_SPLIT:
+            splitted = text.split(FONT_SPLIT)
+        else:
+            splitted = [x for x in text]
+        for word in splitted:
             curr_x+=len(word)*FONTS_WH[i][0]
             if curr_x > w:
                 curr_x = len(word)*FONTS_WH[i][0]
@@ -94,8 +107,8 @@ def get_text_wh(text, font, draw, mw):
             w = cw
     return w,h
     
-
-def drawTextBox(draw, text, x,y, w, h, font=None, font_size=None, font_color=None, confid=1, exact_font=None):
+def drawTextBox(draw, text, x,y, w, h, font=None, font_size=None, font_color=None, 
+                confid=1, exact_font=None):
     text = text.strip()
     if h < 18:
         h = 18
@@ -129,21 +142,36 @@ def drawTextBox(draw, text, x,y, w, h, font=None, font_size=None, font_color=Non
     draw.multiline_text((x,y), outtext, font_color_byte, font=succ_f, spacing=1)
     return draw
 
+DEFAULT_FONT = "RobotoCondensed-Bold.ttf"
+CJK_FONT = "NotoSansCJKtc-Black.ttf"
+
+def try_switch_font(target_lang):
+    if OVERRIDE_FONT is False:
+        if target_lang.lower() in ['zh', 'zh-cn', 'zh-tw', 'ko', 'ja']:
+            if FONT != CJK_FONT:
+                load_font(CJK_FONT, "")
+        else:
+            if FONT != DEFAULT_FONT:
+                load_font(DEFAULT_FONT, " ")
+
 class ImageModder:
     @classmethod
     def write(cls, image_object, ocr_data, target_lang="en"):
+
         t_time = time.time()
         img = image_object.convert("RGBA")
         draw = ImageDraw.Draw(img)
-        
-        font_name = "RobotoCondensed-Bold.ttf"
+        #font_name = "RobotoCondensed-Bold.ttf"
+
+        try_switch_font(target_lang)
+        font_name = FONT
         if "ocr_results" in ocr_data:
             ocr_data = ocr_data['ocr_results']
         for block in ocr_data['blocks']:
             for key in block['bounding_box']:
                 if not type(block['bounding_box'][key]) == int:
                     block['bounding_box'][key] = int(block['bounding_box'][key])
-            draw = drawTextBox(draw, block['translation'][target_lang], 
+            draw = drawTextBox(draw, block['translation'][target_lang.lower()], 
                               block['bounding_box']['x']+2,
                               block['bounding_box']['y'],
                               block['bounding_box']['w']-2,

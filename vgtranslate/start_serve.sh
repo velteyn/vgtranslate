@@ -1,5 +1,5 @@
 #!/bin/bash
 cd ..
-../ENV_APP/bin/python setup.py install
+../ENV_VG1/bin/python setup.py install
 cd vgtranslate
-../../ENV_APP/bin/python serve.py
+../../ENV_VG1/bin/python serve.py

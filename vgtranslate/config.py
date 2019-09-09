@@ -15,6 +15,8 @@ local_server_api_key_type = "google"
 local_server_ocr_processor = ""
 
 font = "RobotoCondensed-Bold.ttf"
+font_split = " "
+font_override = False
 
 def load_init():
     global server_host
@@ -29,6 +31,8 @@ def load_init():
     global local_server_api_key_type
     global local_server_ocr_processor
     global font
+    global font_split
+    global font_override
 
     try:
         config_file = json.loads(open("./config.json").read())
@@ -65,8 +69,13 @@ def load_init():
 
     if "font" in config_file:
         font = config_file['font']
+    if "font_split" in config_file:
+        font_split = config_file['font_split']
+    if "font_override" in config_file:
+        font_override = config_file['font_override']
+
     print "using font: "+font
-    imaging.load_font(font)
+    imaging.load_font(font, font_split, font_override)
     print "config loaded"
     print "===================="
     #print user_api_key

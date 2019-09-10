@@ -10,7 +10,7 @@ import subprocess
 from util import get_color_counts_simple, reduce_to_multi_color, segfill
 
 if os.name == "nt":
-    import pyocr_util_windows 
+    import pyocr_util 
 else:
     import pytesseract
 

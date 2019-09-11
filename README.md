@@ -23,7 +23,7 @@ If you run into trouble, you can join the RetroArch discord or the ZTranslate di
 
 You can use either use Google API keys yourself to run vgtranslate, or use an account with the ztranslate.net service.  The ZTranslate service in this case basically acts like a standalone vgtranslate server that's setup with it's own Google API keys.  The main purpose being that you can try out vgtranslate without having to sign up to Google Cloud first, and getting some savings with a volume discount on the Google Cloud api calls.  To get an API key for ZTranslate, go to https://ztranslate.net , sign up, and go to the Settings page.  The ZTranslate API key will be at the bottom.
 
-As of writing, ztranslate.net allows 1000 calls per month (for free), while if you sign up for Google Cloud, you get $300 worth of API credits.  Each vgtranslate call costs about 0.2-0.3 cents, so it makes sense to use the Google API keys directly instead of pooling than with ZTranslate, at least at first.
+As of writing, ztranslate.net allows 10,000 calls per month (for free), while if you sign up for Google Cloud, you get $300 worth of API credits.  Each vgtranslate call costs about 0.2-0.3 cents, so it makes sense to use the Google API keys directly instead of pooling than with ZTranslate, at least at first.
 
 See: https://cloud.google.com/billing/docs/how-to/manage-billing-account about how to create a Google Cloud account and https://cloud.google.com/docs/authentication/api-keys about creating Google Cloud API keys
 
@@ -38,7 +38,7 @@ If using Google Cloud keys, be sure to set the API key to not have restricted AP
     "local_server_api_key_type": "ztranslate",
     "local_server_host": "localhost",
     "local_server_port": 4404,
-    "user_api_key": "<ztranslate.net api key>",
+    "user_api_key": "ztranslate.net api key goes here",
     "local_server_enabled": true
 }
 ```

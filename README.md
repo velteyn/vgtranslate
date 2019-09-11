@@ -13,7 +13,7 @@ Lightweight server for doing OCR and machine translation on game screen captures
 If you have trouble running the above code on windows, you can try running a pre-built release:
 
 1. Download a release here: [vgtranslate_server_v1.03.zip](https://ztranslate.net/download/vgtranslate_serve_v1.03.zip?owner=)
-2. Change the `config.json` as in the above.
+2. Change the `config.json` as in following section.
 3. Run `serve.exe`.
 
 If you run into trouble, you can join the RetroArch discord or the ZTranslate discord ( https://ztranslate.net/community ) and ask @Beaker for help.

@@ -28,7 +28,7 @@ class CallScreenshots:
 class CallService:
     @classmethod
     def call_service(cls, image_data, source_lang, target_lang,
-                          request_output=None, mode="fast"):
+                          request_output=None, mode="fast", extra=None):
         if request_output is None:
             request_output = ['image']
         request_output = ",".join(request_output)     
@@ -40,6 +40,9 @@ class CallService:
         if mode:
             url+="&mode="+mode
         url+="&api_key="+config.user_api_key
+        if extra:
+            for key in extra:
+                url+="&"+key+"="+extra[key]
         body = {"image": image_data}
         conn = httplib.HTTPSConnection("ztranslate.net", 443)
         conn.request("POST", url, json.dumps(body))

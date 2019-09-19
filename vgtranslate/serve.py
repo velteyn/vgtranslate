@@ -92,7 +92,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             elif entry == 'sound' and not 'sound' in request_out_dict:
                 request_out_dict['sound'] = 'wav'
             else:
-                if sound_formats.get(entry):
+                if SOUND_FORMATS.get(entry):
                      request_out_dict['sound'] = entry
                 else:
                      request_out_dict['image'] = entry

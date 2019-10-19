@@ -42,6 +42,13 @@ def image_to_string_format(img, format_type):
     string = output.getvalue()
     return base64.b64encode(string)
 
+def image_to_string_png(img):
+    output = StringIO.StringIO()
+    img.convert("RGB").save(output, format="PNG")
+    string = output.getvalue()
+    print("png length: ", len(string))
+    return base64.b64encode(string)
+
 def color_hex_to_byte(text_color):
     return (int(text_color[0:2], 16),
             int(text_color[2:4], 16),

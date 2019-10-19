@@ -167,6 +167,7 @@ class ImageModder:
         font_name = FONT
         if "ocr_results" in ocr_data:
             ocr_data = ocr_data['ocr_results']
+        
         for block in ocr_data['blocks']:
             for key in block['bounding_box']:
                 if not type(block['bounding_box'][key]) == int:

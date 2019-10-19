@@ -62,7 +62,9 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             query_components = {}
         content_length = int(self.headers.getheader('content-length', 0))
         data = self.rfile.read(content_length);
+        print data[:100]
         print content_length
+        print data[-100:]
         data = json.loads(data)
         
         start_time = time.time()
@@ -72,6 +74,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         output = json.dumps(result)
+        print ['out:', output[-100:]]
         self.send_header("Content-Length", len(output))
         self.end_headers()
 
@@ -86,6 +89,9 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         request_output = request_output.split(",")
 
         request_out_dict = dict()
+        alpha = False
+        error_string = ""
+
         for entry in request_output:
             if entry =='image' and not 'image' in request_out_dict:
                 request_out_dict['image'] = 'bmp'
@@ -95,13 +101,18 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 if SOUND_FORMATS.get(entry):
                      request_out_dict['sound'] = entry
                 else:
-                     request_out_dict['image'] = entry
+                     if entry[-2:] == "-a":
+                         request_out_dict['image'] = entry[:-2]
+                         alpha = True
+                     else:
+                         request_out_dict['image'] = entry
 
         print request_output
         pixel_format = "RGB"
         image_data = body.get("image")
         
         image_object = load_image(image_data).convert("RGB")
+        print("w: "+str(image_object.width)+" h: "+str(image_object.height))
         if pixel_format == "BGR": 
             image_object = image_object.convert("RGB")
             image_object = swap_red_blue(image_object)
@@ -120,14 +131,17 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 image_object = image_object.convert("P", palette=Image.ADAPTIVE)
 
             #pass the call onto the ztranslate service api...
-            extra_kwargs = {}
-            image_data = image_to_string_format(image_object, "png")
+
+            body_kwargs = dict()
+            for key in body:
+                if key != "image":
+                    body_kwargs[key] = body[key]
+            
+            image_data = image_to_string(image_object)
             output = screen_translate.CallService.call_service(image_data, 
                                                                source_lang, target_lang,
                                                                mode=mode,
-                                                               request_output=request_output,
-                                                               extra=extra_kwargs)
-            
+                                                               request_output=request_output, body_kwargs=body_kwargs)
             return output
         elif config.local_server_api_key_type == "google":
             print "using google......"
@@ -142,8 +156,11 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
             api_ocr_key = config.local_server_ocr_key
             api_translation_key = config.local_server_translation_key
-           
+            
             data, raw_output = self.google_ocr(image_data, source_lang, api_ocr_key)
+            if not data:
+                error_string = "No text found."
+
             data = self.process_output(data, raw_output, image_data,
                                        source_lang)
             data = self.translate_output(data, target_lang,
@@ -161,6 +178,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 window_obj.curr_image = imaging.ImageItterator.prev()
 
             if "image" in request_out_dict:
+                if alpha:
+                    image_object = Image.new("RGBA", 
+                                             (image_object.width, image_object.height),
+                                             (0,0,0,0))
                 output_image = imaging.ImageModder.write(image_object, data, target_lang)
  
                 if pixel_format == "BGR": 
@@ -168,6 +189,9 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     output_image = swap_red_blue(output_image)
 
                 output_data["image"] = image_to_string_format(output_image, request_out_dict['image'])
+
+            if error_string:
+                output_data['error'] = error_string
             return output_data
 
         elif config.local_server_api_key_type == "tess_google":
@@ -178,10 +202,15 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             api_translation_key = config.local_server_translation_key
             ocr_processor = config.local_server_ocr_processor
             data, source_lang = self.tess_ocr(image_data, source_lang, ocr_processor)
-        
+            if not data.get("blocks"):
+                error_string = "No text found."
             data = self.translate_output(data, target_lang,
                                          source_lang=source_lang,
                                          google_translation_key=api_translation_key)
+            if alpha:
+                image_object = Image.new("RGBA", 
+                                         (image_object.width, image_object.height),
+                                         (0,0,0,0))
             output_image = imaging.ImageModder.write(image_object, data, target_lang)
             if window_obj:
                 window_obj.load_image_object(output_image)
@@ -190,9 +219,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if pixel_format == "BGR": 
                 output_image = output_image.convert("RGB")
                 output_image = swap_red_blue(output_image)
-
-            return {"image": image_to_string_format(output_image, request_out_dict['image'])}
-
+            return_doc = {"image": image_to_string_format(output_image, request_out_dict['image'])}
+            if error_string:
+                return_doc['error'] = error_string
+            return return_doc
 
     def text_to_speech(self, data, target_lang=None):
         texts = list()
@@ -364,7 +394,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     translates['data']['translations'][i]['translatedText']
             block['target_lang'] = target_lang
             block['language'] = translates['data']['translations'][i]['detectedSourceLanguage']
-            if source_lang and source_lang != lang_2_to_3.get(block['language'], ""):
+            if block['language'] and source_lang and source_lang != lang_2_to_3.get(block['language'], ""):
                 continue
             new_blocks.append(block)
         data['blocks'] = new_blocks

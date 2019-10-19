@@ -28,10 +28,10 @@ class CallScreenshots:
 class CallService:
     @classmethod
     def call_service(cls, image_data, source_lang, target_lang,
-                          request_output=None, mode="fast", extra=None):
+                          request_output=None, mode="fast", body_kwargs=None):
         if request_output is None:
             request_output = ['image']
-        request_output = ",".join(request_output)     
+        request_output = ",".join(request_output)
         url = "/service?output="+request_output
         if target_lang:
             url+="&target_lang="+target_lang
@@ -44,6 +44,9 @@ class CallService:
             for key in extra:
                 url+="&"+key+"="+extra[key]
         body = {"image": image_data}
+        if body_kwargs:
+            for key in body_kwargs:
+                body[key] = body_kwargs[key]
         conn = httplib.HTTPSConnection("ztranslate.net", 443)
         conn.request("POST", url, json.dumps(body))
         rep = conn.getresponse()
@@ -51,5 +54,4 @@ class CallService:
         output = json.loads(d)
 
         return output
-
 

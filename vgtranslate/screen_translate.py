@@ -28,7 +28,8 @@ class CallScreenshots:
 class CallService:
     @classmethod
     def call_service(cls, image_data, source_lang, target_lang,
-                          request_output=None, mode="fast", body_kwargs=None):
+                          request_output=None, mode="fast", extra=None,
+                          body_kwargs=None):
         if request_output is None:
             request_output = ['image']
         request_output = ",".join(request_output)

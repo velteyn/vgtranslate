@@ -176,7 +176,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if window_obj:
                 window_obj.load_image_object(output_image)
                 window_obj.curr_image = imaging.ImageItterator.prev()
-
+            
             if "image" in request_out_dict:
                 if alpha:
                     image_object = Image.new("RGBA", 
@@ -187,8 +187,8 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 if pixel_format == "BGR": 
                     output_image = output_image.convert("RGB")
                     output_image = swap_red_blue(output_image)
-
-                output_data["image"] = image_to_string_format(output_image, request_out_dict['image'])
+                
+                output_data["image"] = image_to_string_format(output_image, request_out_dict['image'],mode="RGBA")
 
             if error_string:
                 output_data['error'] = error_string
@@ -219,7 +219,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if pixel_format == "BGR": 
                 output_image = output_image.convert("RGB")
                 output_image = swap_red_blue(output_image)
-            return_doc = {"image": image_to_string_format(output_image, request_out_dict['image'])}
+            return_doc = {"image": image_to_string_format(output_image, request_out_dict['image'], "RGBA")}
             if error_string:
                 return_doc['error'] = error_string
             return return_doc

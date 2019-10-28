@@ -33,12 +33,12 @@ def image_to_string(img):
     string = output.getvalue()
     return base64.b64encode(string)
 
-def image_to_string_format(img, format_type):
+def image_to_string_format(img, format_type, mode="RGB"):
     output = StringIO.StringIO()
     try:
-        img.convert("RGB").save(output, format=format_type)
+        img.convert(mode).save(output, format=format_type)
     except:
-        img.convert("RGB").save(output, format="BMP")
+        img.convert(mode).save(output, format="BMP")
     string = output.getvalue()
     return base64.b64encode(string)
 

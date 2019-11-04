@@ -224,7 +224,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 return_doc['error'] = error_string
             return return_doc
 
-    def text_to_speech(self, data, target_lang=None):
+    def text_to_speech(self, data, target_lang=None, format_type=None):
         texts = list()
         texts2 = list()
         i = 0

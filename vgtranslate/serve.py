@@ -11,13 +11,15 @@ import os
 import base64
 from util import load_image, image_to_string, fix_neg_width_height,\
                  image_to_string_format, swap_red_blue, segfill,\
-                 reduce_to_multi_color
+                 reduce_to_multi_color, reduce_to_text_color,\
+                 color_hex_to_byte
 import screen_translate
 import imaging
 import ocr_tools
 from text_to_speech import TextToSpeech
 import sys
-from PIL import Image
+import re
+from PIL import Image, ImageEnhance, ImageDraw
 
 #dictionary going from ISO-639-1 to ISO-639-2/T language codes (mostly):
 lang_2_to_3 = {
@@ -46,6 +48,88 @@ g_debug_mode = 0
 SOUND_FORMATS = {"wav": 1}
 IMAGE_FORMATS = {"bmp": 1, "png": 1}
 
+
+class ServerOCR:
+    @classmethod
+    def _preprocess_color(cls, image_data, colors="FFFFFF"):
+        img = load_image(image_data)
+        bg = "000000"
+        if colors.lower().strip() == "detect":
+            pass
+        elif colors:
+            print ("Pre process ", colors)
+            try:
+                colors = [x.strip() for x in re.split(",| |;", colors)]
+                new_colors = list()
+                for color in colors:
+                    if not color:
+                        continue
+                    if color[:2].lower() == "bg":
+                        bg = color[2:8]
+                    else:
+                        c = color[:6]
+                        if len(color)>6:
+                            try:
+                                num = int(color[6:])
+                            except:
+                                num = 32
+                        else:
+                            num = 32
+                        new_colors.append([color, num])
+                img = reduce_to_text_color(img, new_colors, bg)
+                print "succ=true"
+            except:
+                raise
+        return bg, image_to_string(img.convert("RGBA"))
+    @classmethod
+    def _preprocess_image(cls, image_data, contrast=2.0):
+        img = load_image(image_data)
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(contrast)
+        return image_to_string(img)
+
+    @classmethod
+    def _preprocess_box(cls, image_data, box, bg):
+        try:
+            box2 = [int(x) for x in box.split(",")]
+            box = {"x1": box2[0], "y1": box2[1],
+                   "x2": box2[2], "y2": box2[3]}
+        except:
+            return image_data
+
+        img = load_image(image_data).convert("RGB")
+        draw = ImageDraw.Draw(img)
+        bg = color_hex_to_byte(bg)
+        fill_color = bg
+
+        recs = [[0,0,img.width, box['y1']-1],
+                [0,box['y2'], img.width, img.height],
+                [0,0, box['x1']-1, img.height],
+                [box['x2'], 0, img.width, img.height]]
+
+        for rec in recs:
+            if rec[0] < 0:
+                rec[0] = 0
+            if rec[0] > img.width:
+                rec[0] = img.width
+            if rec[1] < 0:
+                rec[1] = 0
+            if rec[1] > img.height:
+                rec[1] = img.height
+
+            if rec[2] < 0:
+                rec[2] = 0
+            if rec[2] > img.width:
+                rec[2] = img.width
+            if rec[3] < 0:
+                rec[3] = 0
+            if rec[3] > img.height:
+                rec[3] = img.height
+            draw.rectangle(rec, fill=fill_color)
+        return image_to_string(img)
+
+
+
 class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -55,6 +139,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write("<body>yo!</body></html>")
         
     def do_POST(self):
+        print "____"
         query = urlparse.urlparse(self.path).query
         if query.strip():
             query_components = dict(qc.split("=") for qc in query.split("&"))
@@ -68,8 +153,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         data = json.loads(data)
         
         start_time = time.time()
-
+        
         result = self._process_request(data, query_components)
+        #result['auto'] = 'auto'
+        print "AUTO AUTO"
         print ['Request took: ', time.time()-start_time]
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -152,6 +239,17 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 image_object = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
 
             image_data = image_to_string(image_object)
+            confidence = config.ocr_confidence
+            if confidence is None:
+                confidence = 0.6
+            bg="000000"
+            if config.ocr_color:
+                bg, image_data = ServerOCR._preprocess_color(image_data, config.ocr_color)
+            if config.ocr_contrast and abs(config.ocr_contrast-1.0)> 0.0001:
+                image_data = ServerOCR._preprocess_image(image_data, config.ocr_contrast)
+            if config.ocr_box:
+                image_data = ServerOCR._preprocess_box(image_data, config.ocr_box, bg)
+
             print len(image_data)
 
             api_ocr_key = config.local_server_ocr_key
@@ -162,7 +260,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 error_string = "No text found."
 
             data = self.process_output(data, raw_output, image_data,
-                                       source_lang)
+                                       source_lang, confidence=confidence)
             data = self.translate_output(data, target_lang,
                                          source_lang=source_lang,
                                          google_translation_key=api_translation_key)
@@ -336,7 +434,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         return data, source_lang
 
-    def process_output(self, data, raw_data, image_data, source_lang=None):
+    def process_output(self, data, raw_data, image_data, source_lang=None, confidence=0.6):
         text_colors = list()
         for entry in raw_data.get('responses', []):
             for page in entry['fullTextAnnotation']['pages']:
@@ -352,7 +450,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                               "text_colors": text_colors[num]
                              }
 
-                if block.get("confidence", 0) <0.8:# and False:
+                if block.get("confidence", 0) <confidence:# and False:
                     continue
                 bb = block.get("boundingBox", {}).get("vertices", [])
                 this_block['bounding_box']['x'] = bb[0].get('x',0)
@@ -482,6 +580,8 @@ def main():
         return
     host = config.local_server_host
     port = config.local_server_port 
+    print "host", host
+    print "port", port
     server_class = BaseHTTPServer.HTTPServer
     httpd = server_class((host, port), APIHandler)
     if "--debug-extra" in sys.argv:

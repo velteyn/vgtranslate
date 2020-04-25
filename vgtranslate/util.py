@@ -278,6 +278,46 @@ def reduce_to_colors(img, colors, threshold):
     img.putpalette(new_palette)
     return img
 
+
+def reduce_to_text_color(img, color_thresh, bg):
+    img = img.convert("RGB")
+    img = img.convert("P", palette=Image.ADAPTIVE)
+    p = img.getpalette()
+    nc = [(color_hex_to_byte(x[0]),x[1]) for x in color_thresh]
+
+    bg = color_hex_to_byte(bg)
+
+    new_palette = list()
+    for i in range(256):
+        r = p[3*i]
+        g = p[3*i+1]
+        b = p[3*i+2]
+        close = None
+        closest = 1000000000
+        for tc,thr in nc:
+            rr = r-tc[0]
+            gg = g-tc[1]
+            bb = b-tc[2]
+            d = rr**2+gg**2+bb**2
+            if d < closest and d < thr**2:
+                closest = d
+                t = 1-(d/(thr**2.0))
+                close = [int(t*(tc[0]-bg[0])+bg[0]),
+                         int(t*(tc[1]-bg[1])+bg[1]),
+                         int(t*(tc[2]-bg[2])+bg[2])]
+            else:
+                pass
+        if close:
+            new_palette.extend([close[0], close[1], close[2]])
+        else:
+            new_palette.extend([bg[0],bg[1],bg[2]])
+    img.putpalette(new_palette)
+    return img
+
+
+
+
+
 def get_color_counts(img, text_colors, threshold):
     if img.mode != "P":
         img = img.convert("P", palette=Image.ADAPTIVE)

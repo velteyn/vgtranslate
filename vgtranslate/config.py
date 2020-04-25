@@ -14,6 +14,11 @@ local_server_translation_key = ""
 local_server_api_key_type = "google"
 local_server_ocr_processor = ""
 
+ocr_confidence = 0.6
+ocr_contrast = 2.0
+ocr_color = None
+ocr_box = None
+
 font = "RobotoCondensed-Bold.ttf"
 font_split = " "
 font_override = False
@@ -33,6 +38,11 @@ def load_init():
     global font
     global font_split
     global font_override
+
+    global ocr_confidence
+    global ocr_contrast
+    global ocr_color
+    global ocr_box
 
     try:
         config_file = json.loads(open("./config.json").read())
@@ -73,6 +83,15 @@ def load_init():
         font_split = config_file['font_split']
     if "font_override" in config_file:
         font_override = config_file['font_override']
+
+    if "ocr_confidence" in config_file:
+        ocr_confidence = config_file['ocr_confidence']
+    if "ocr_contrast" in config_file:
+        ocr_contrast = config_file['ocr_contrast']
+    if "ocr_color" in config_file:
+        ocr_color = config_file['ocr_color']
+    if "ocr_box" in config_file:
+        ocr_box = config_file['ocr_box']
 
     print "using font: "+font
     imaging.load_font(font, font_split, font_override)

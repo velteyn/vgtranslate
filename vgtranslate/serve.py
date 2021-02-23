@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import BaseHTTPServer
 import HTMLParser
 import time

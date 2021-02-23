@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 from setuptools import setup, find_packages
 
 __VERSION__ = "1.0.0"

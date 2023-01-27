@@ -10,7 +10,7 @@ def main(args=None):
     setup_required_packages = []
 
     required_packages = ["Pillow==5.1.0", "numpy==1.15.2",
-                         "opencv-python==3.4.3.18",
+                         #"opencv-python==3.4.3.18",
                          "pytesseract==0.2.4","pycrypto==2.6", "pycurl",
                          "pyttsx"#, "gender-guess"
                          ]

@@ -34,12 +34,15 @@ class TextToSpeech:
         if source_lang == "en-US":
             doc['voice']['name'] = voice
         body = json.dumps(doc)
-
+        print("----------------")
+        print(body)
         conn = httplib.HTTPSConnection("texttospeech.googleapis.com", 443)
         conn.request("POST", uri, body)
         rep = conn.getresponse()
         data = rep.read()
         data = json.loads(data)
+        print('============')
+        print(data)
         #print data
         file_contents = base64.b64decode(data['audioContent'])
         return file_contents

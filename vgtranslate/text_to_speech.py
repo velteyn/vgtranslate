@@ -16,6 +16,8 @@ class TextToSpeech:
         t_time = time.time()
         uri = "/v1beta1/text:synthesize?key="
         uri+=config.local_server_ocr_key
+        if not text:
+            text = "No text found."
         doc = {
             "audioConfig": {
                 "audioEncoding": "LINEAR16",

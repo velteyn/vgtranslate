@@ -389,7 +389,8 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         data = self._send_request("vision.googleapis.com", 443, uri, "POST", body)
         output = json.loads(data)
-
+        print("google output")
+        print(output)
         if output.get("responses", [{}])[0].get("fullTextAnnotation"):
             return output['responses'][0]['fullTextAnnotation'], output
         else:

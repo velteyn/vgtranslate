@@ -1,12 +1,12 @@
-import StringIO
+from io import StringIO
 import io
 import base64
 import colorsys
 from PIL import Image, ImageDraw, ImageChops
 
 def swap_red_blue(image):
-    print image.mode
-    print image.split()
+    print (image.mode)
+    print (image.split())
     r,g,b = image.split()
     return Image.merge('RGB', (b,g,r))
 
@@ -496,7 +496,7 @@ def black_expand(image, mark_color, target_colors):
                         if j < h-1 and image.getpixel((i, j+1)) in target_colors:
                             image.putpixel((i,j+1), mark_color)
                 break
-    print "Black expand took: "+str(time.time()-t_time)
+    print( "Black expand took: "+str(time.time()-t_time))
     return image
 
 def expand_vertical(img, bg_color, target_color):
@@ -541,7 +541,7 @@ def expand_vertical(img, bg_color, target_color):
                             upset[j] = 1
                 for key in upset:
                     image.putpixel((i, key), target)
-    print "vert expand ", time.time()-t_time
+    print ("vert expand ", time.time()-t_time)
     return image
    
 
@@ -590,7 +590,7 @@ def expand_horizontal(img, bg_color, target_color):
                             upset[i] = 1
                 for key in upset:
                     image.putpixel((key, j), target)
-    print "horizontal expand ", time.time()-t_time
+    print( "horizontal expand ", time.time()-t_time)
     return image
 
 def draw_solid_box(image, color, bb):

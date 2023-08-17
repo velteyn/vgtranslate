@@ -21,7 +21,7 @@ def load_font(font_name, font_split=" ", font_override=False):
     
     FONT = font_name
     OVERRIDE_FONT = font_override
-    print [FONT, OVERRIDE_FONT]
+    print ([FONT, OVERRIDE_FONT])
     FONTS = [ImageFont.truetype("./fonts/"+FONT, x+8) for x in range(32)]
     FONTS_WH = list()
     fill_fonts_wh()
@@ -260,7 +260,7 @@ class ImageItterator:
                 orders.append(int(data[5].partition(".")[0]))#seconds
                 orders.append(".png")             
         except:
-            print date, len(orders)
+            print (date, len(orders))
             while len(orders) < 6:
                 orders.append(0)
             if "_" in date:

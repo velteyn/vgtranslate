@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+vgtranslate.egg-info/PKG-INFO
+vgtranslate.egg-info/SOURCES.txt
+vgtranslate.egg-info/dependency_links.txt
+vgtranslate.egg-info/entry_points.txt
+vgtranslate.egg-info/not-zip-safe
+vgtranslate.egg-info/requires.txt
+vgtranslate.egg-info/top_level.txt

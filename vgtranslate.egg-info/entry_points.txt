@@ -1,0 +1,3 @@
+                        [console_scripts] 
+                        vg_translate_serve=vg_translate.serve:main
+                        

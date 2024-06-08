@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 __VERSION__ = "1.0.0"
 
@@ -10,7 +10,7 @@ def main(args=None):
     setup_required_packages = []
 
     required_packages = ["Pillow==5.1.0", "numpy==1.15.2",
-                         "opencv-python==3.4.3.18",
+                         "opencv-python==3.4.18.65",
                          "pytesseract==0.2.4",
                          "pyttsx"#, "gender-guess"
                          ]

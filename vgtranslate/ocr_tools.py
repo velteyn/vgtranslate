@@ -1,12 +1,12 @@
-from PIL import Image
 import base64
-import time
 import io
-import sys
 import os
 import shlex
 import subprocess
+import sys
+import time
 
+from PIL import Image
 from util import get_color_counts_simple, reduce_to_multi_color, segfill
 
 if os.name == "nt":
@@ -14,12 +14,12 @@ if os.name == "nt":
 else:
     import pytesseract
 
-
 lang_to_tesseract_lang = {
     "deu": "deu",
     "eng": "eng",
     "jpn": "jpn"
 }
+
 
 
 def setup_pytesseract(lang="eng"):
@@ -58,7 +58,7 @@ def tess_helper_windows(image, lang=None, mode=None,min_pixels=1):
     if min_pixels and pc < min_pixels:
         return list()
     x = pyocr_util.image_to_boxes(image, lang=lang, mode=mode)
-    print ['ocr time', time.time()-t_]
+    print (['ocr time', time.time()-t_])
 
     found_chars = list()
     for word_box in x:     
@@ -155,7 +155,7 @@ def tess_helper_linux(image, lang=None, mode=None, min_pixels=1):
 
             if i == 1:
                 raise
-            print 'tttttttttttttttttttttttt'
+            print ('tttttttttttttttttttttttt')
             setup_pytesseract()
 
 
@@ -217,7 +217,7 @@ def tess_helper_linux(image, lang=None, mode=None, min_pixels=1):
         if curr_line:
             found_lines.append([curr_line, curr_box])
     for l in found_lines:
-        print l
+        print (l)
     return found_lines
 
 
@@ -251,7 +251,7 @@ def tess_helper_data_linux(image, lang=None, mode=None, min_pixels=1):
 
             if i == 1:
                 raise
-            print 'failed tesseract, retying...'
+            print ('failed tesseract, retying...')
             setup_pytesseract()
  
     #x now holds the tesseract computed data in table csv (tab) format:

@@ -1,17 +1,15 @@
-from PIL import Image
-
 import os
-import os.path
+
+from PIL import Image
 
 os.environ['TESSDATA_PREFIX'] = "bin"
 
-import pyocr.libtesseract 
-import pyocr
 import ctypes
-import time
 
+import pyocr
+import pyocr.libtesseract
 
-################ hack to override pyocr ##################33
+# Hack to override pyocr
 handle = None
 
 def load_tesseract_dll(lang="eng"):
@@ -24,10 +22,8 @@ def release_tesseract_dll():
 
 def main():
     image = Image.open("bin\\tsg.tif")
-
     load_tesseract_dll()
-    s=image_to_boxes(image, 'eng')
-
+    s = image_to_boxes(image, 'eng')
 
 def image_to_boxes(image, lang=None, builder=None, mode=6):
     global handle
@@ -46,7 +42,7 @@ def image_to_boxes(image, lang=None, builder=None, mode=6):
             if lang_item not in pyocr.libtesseract.tesseract_raw.get_available_languages(handle):
                 raise pyocr.TesseractError(
                     "no lang",
-                    "language {} is not available".format(lang_item)
+                    f"language {lang_item} is not available"
                 )
 
         pyocr.libtesseract.tesseract_raw.set_page_seg_mode(
@@ -71,10 +67,10 @@ def image_to_boxes(image, lang=None, builder=None, mode=6):
         while True:
             if pyocr.libtesseract.tesseract_raw.page_iterator_is_at_beginning_of(
                     page_iterator, lvl_line):
-                (r, box) = pyocr.libtesseract.tesseract_raw.page_iterator_bounding_box(
+                r, box = pyocr.libtesseract.tesseract_raw.page_iterator_bounding_box(
                     page_iterator, lvl_line
                 )
-                assert(r)
+                assert r
                 box = pyocr.libtesseract._tess_box_to_pyocr_box(box)
                 builder.start_line(box)
 
@@ -93,10 +89,10 @@ def image_to_boxes(image, lang=None, builder=None, mode=6):
             )
 
             if word is not None and confidence is not None and word != "":
-                (r, box) = pyocr.libtesseract.tesseract_raw.page_iterator_bounding_box(
+                r, box = pyocr.libtesseract.tesseract_raw.page_iterator_bounding_box(
                     page_iterator, lvl_word
                 )
-                assert(r)
+                assert r
                 box = pyocr.libtesseract._tess_box_to_pyocr_box(box)
                 builder.add_word(word, box, confidence)
 
@@ -111,5 +107,5 @@ def image_to_boxes(image, lang=None, builder=None, mode=6):
 
     return builder.get_output()
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

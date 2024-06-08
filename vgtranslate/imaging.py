@@ -1,9 +1,10 @@
-from PIL import Image, ImageFont, ImageDraw
-import os
 import datetime
+import os
 import time
-from util import color_hex_to_byte
 
+from PIL import Image, ImageDraw, ImageFont
+
+from util import color_hex_to_byte
 
 FONT = "RobotoCondensed-Bold.ttf"
 FONTS = list()
@@ -17,47 +18,51 @@ def load_font(font_name, font_split=" ", font_override=False):
     global FONTS_WH
     global FONT_SPLIT
     global OVERRIDE_FONT
-    FONT_SPLIT = font_split
     
+    FONT_SPLIT = font_split
     FONT = font_name
     OVERRIDE_FONT = font_override
-    print ([FONT, OVERRIDE_FONT])
-    FONTS = [ImageFont.truetype("./fonts/"+FONT, x+8) for x in range(32)]
-    FONTS_WH = list()
-    fill_fonts_wh()
+    print([FONT, OVERRIDE_FONT])
+    
+    # Creazione della lista dei font
+    FONTS = [ImageFont.truetype("./fonts/" + FONT, x + 8) for x in range(32)]
+    
+    # Calcolo delle dimensioni dei caratteri
+    FONTS_WH = fill_fonts_wh(FONTS)
 
 
-def fill_fonts_wh():
-    global FONTS_WH
-    test = Image.new('RGBA', (100, 100))
-    test = test.convert("RGBA")
-    draw = ImageDraw.Draw(test)
+def fill_fonts_wh(fonts):
+    fonts_wh = []
+    test_image = Image.new('RGBA', (100, 100))
+    draw = ImageDraw.Draw(test_image)
 
     largest_char_w_size = 0
-    avg_w = 0
     largest_char_h_size = 0
-    avg_h = 0
 
-    for i in range(len(FONTS)):
-        t = 0
-        avg_w = 0
-        avg_h = 0
+    for font in fonts:
+        total_w = 0
+        total_h = 0
+        num_chars = 0
+        
         for char in u"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz?!.,;'\"\u624b":
-            t+=1
-            size_x, size_y = draw.textsize(char, font=FONTS[i])
-            avg_w += size_x
-            avg_h += size_y
+            num_chars += 1
+            bbox = font.getbbox(char)
+            size_x = bbox[2] - bbox[0]
+            size_y = bbox[3] - bbox[1]
+            total_w += size_x
+            total_h += size_y
 
             if size_x > largest_char_w_size:
-                largest_char_w_size = size_x 
+                largest_char_w_size = size_x
             if size_y > largest_char_h_size:
-                largest_char_h_size = size_y 
-        avg_w = int(avg_w/t)
-        avg_h = int(avg_h/t)
+                largest_char_h_size = size_y
+        
+        avg_w = int(total_w / num_chars)
+        avg_h = int(total_h / num_chars)
 
-        FONTS_WH.append([avg_w, largest_char_h_size])
+        fonts_wh.append([avg_w, largest_char_h_size])
 
-    draw = ImageDraw.Draw(test)
+    return fonts_wh
 
 
 

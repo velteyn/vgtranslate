@@ -1,14 +1,16 @@
-import httplib
-import json
 import base64
+import http.client as http
 import io
-import config
+import json
 import time
+
+import config
 from PIL import Image
 
+
 class ServerClient:
-    @classmethod
-    def call_server(cls, image_object, source_lang, target_lang, fast, free):
+    @staticmethod
+    def call_server(image_object, source_lang, target_lang, fast, free):
         if fast:
             mode = "fast"
         elif free:
@@ -17,64 +19,53 @@ class ServerClient:
             mode = "normal"
 
         if mode == "fast":
-            #speeds up upload by 4x, but inexact pixels
+            # Speeds up upload by 4x, but inexact pixels
             image_object = image_object.convert("P", palette=Image.ADAPTIVE)
-        else:
-            #speeds up upload by %33 by removing alpha.
-            image_object = image_object.convert("RGB")
-        
+
         image_byte_array = io.BytesIO()
         image_object.save(image_byte_array, format='PNG')
         image_data = image_byte_array.getvalue()
 
         image_data = base64.b64encode(image_data)
-        if fast:
-            mode = "fast"
-        elif free:
-            mode = "free"
-        else:
-            mode = "normal"
-         
 
         body = {
             "timestamp": "",
             "api_key": config.user_api_key,
             "source_lang": source_lang,
             "target_lang": target_lang,
-            "image": image_data,
+            "image": image_data.decode('utf-8'),  # Decoding to str
             "mode": mode
         }
         t_time = time.time()
-        
+
         try:
-            conn = httplib.HTTPSConnection(config.server_host, config.server_port)
-            conn.request("POST", "/ocr", json.dumps(body))
+            conn = http.HTTPSConnection(config.server_host, config.server_port)
+            conn.request("POST", "/ocr", json.dumps(body).encode('utf-8'))  # Encoding to bytes
             rep = conn.getresponse()
-            d = rep.read()
+            d = rep.read().decode('utf-8')  # Decoding response
             output = json.loads(d)
-            print ['Took: ', time.time()-t_time]
+            print(['Took: ', time.time()-t_time])
 
             return output
-        except:
+        except Exception as e:
             import traceback
             traceback.print_exc()
-            print [body]
-            print "==="
-            print [d]
+            print([body])
+            print("===")
+            print([d])
             raise
 
-    @classmethod
-    def get_quota(cls):
+    @staticmethod
+    def get_quota():
         body = {
             "api_key": config.user_api_key,
         }
         try:
-            conn = httplib.HTTPSConnection(config.server_host, config.server_port)
-            conn.request("POST", "/quota", json.dumps(body))
+            conn = http.HTTPSConnection(config.server_host, config.server_port)
+            conn.request("POST", "/quota", json.dumps(body).encode('utf-8'))  # Encoding to bytes
             rep = conn.getresponse()
-            d = rep.read()
+            d = rep.read().decode('utf-8')  # Decoding response
             output = json.loads(d)
             return output
-        except:
+        except Exception as e:
             return dict()
-        

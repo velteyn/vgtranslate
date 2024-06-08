@@ -12,7 +12,9 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": true,
+            "cwd": "${fileDirname}",
+            "purpose":["debug-in-terminal"]
         }
     ]
 }

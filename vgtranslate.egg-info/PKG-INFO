@@ -8,6 +8,11 @@ Author-email:
 Keywords: vgtranslate
 Classifier: Programming Language :: Python
 License-File: LICENSE
+Requires-Dist: Pillow==10.4.0
+Requires-Dist: numpy==2.1.0
+Requires-Dist: opencv-python==3.4.18.65
+Requires-Dist: pytesseract==0.2.4
+Requires-Dist: pyttsx
 
 # VGTranslate
 

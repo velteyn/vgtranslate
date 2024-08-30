@@ -9,10 +9,11 @@ def main(args=None):
 
     setup_required_packages = []
 
-    required_packages = ["Pillow==5.1.0", "numpy==1.15.2",
+    required_packages = ["Pillow==10.4.0", "numpy==2.1.0",
                          "opencv-python==3.4.18.65",
                          "pytesseract==0.2.4",
-                         "pyttsx"#, "gender-guess"
+                         "pyttsx",
+                         "pyocr==0.8.5"#, "gender-guess"
                          ]
 
     test_required_packages = ["nose", "coverage"]

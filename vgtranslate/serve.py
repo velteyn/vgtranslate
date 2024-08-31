@@ -134,11 +134,15 @@ class ServerOCR:
 
 class APIHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write(b"<html><head><title></title></head></html>")
-        self.wfile.write(b"<body>yo!</body></html>")
+        try:
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><head><title></title></head><body>yo!</body></html>")
+        except ConnectionAbortedError as e:
+            print(f"ConnectionAbortedError: {e}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     def do_POST(self):
         print("____")
@@ -317,4 +321,10 @@ if __name__ == "__main__":
     if "stop" in sys.argv:
         stop_server()
     else:
+        config.load_init()
         start_server()
+        print("Server is running... Press Ctrl+C to stop.")
+        try:
+            server_thread.join()
+        except KeyboardInterrupt:
+            stop_server()

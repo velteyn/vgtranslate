@@ -13,7 +13,7 @@ def main(args=None):
                          "opencv-python==3.4.18.65",
                          "pytesseract==0.2.4",
                          "pyttsx",
-                         "pyocr==0.8.5"#, "gender-guess"
+                         "pyocr==0.8.5"
                          ]
 
     test_required_packages = ["nose", "coverage"]

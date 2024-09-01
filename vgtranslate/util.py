@@ -28,7 +28,7 @@ def load_image(image_data):
     return image
 
 def image_to_string(img):
-    output = StringIO.StringIO()
+    output = io.BytesIO()  # Use io.BytesIO() instead of StringIO.StringIO()
     img.save(output, format="PNG")
     string = output.getvalue()
     return base64.b64encode(string)
@@ -200,7 +200,7 @@ def reduce_to_multi_color(img, bg, colors_map, threshold):
             else:
                 tc, tc_map = entry, entry
 
-            if isinstance(tc, basestring):           
+            if isinstance(tc, str):           
                 tc = color_hex_to_byte(tc)
 
                 rr = r-tc[0]
@@ -352,7 +352,7 @@ def fix_bounding_box(img, bounding_box):
     w = img.width
     h = img.height
     for key in bounding_box:
-        if isinstance(bounding_box[key], basestring):
+        if isinstance(bounding_box[key], str):
             bounding_box[key] = int(bounding_box[key])
     if 'w' in bounding_box:
         if bounding_box['x'] < 0:
@@ -459,7 +459,7 @@ def tint_image(image, color, border=2):
 def black_expand(image, mark_color, target_colors):
     w = image.width
     h = image.height
-    if isinstance(target_colors, basestring):
+    if isinstance(target_colors, str):
         target_colors = [target_colors]
 
     mark_color = tuple(color_hex_to_byte(mark_color)[0:3])

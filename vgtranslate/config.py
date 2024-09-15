@@ -46,9 +46,10 @@ def load_init():
 
     try:
         config_file = json.loads(open("./config.json").read())
-    except Exception as e:
+    except json.JSONDecodeError as e:
         print ("Invalid config file specification:")
-        print (e.message)
+        print (e.doc)
+        print ('Error occurred at position', e.pos, ':', e.msg)
         return False
 
     if "server_host" in config_file:

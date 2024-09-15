@@ -11,7 +11,7 @@ def main(args=None):
 
     required_packages = ["Pillow==10.4.0", "numpy==2.1.0",
                          "opencv-python==3.4.18.65",
-                         "pytesseract==0.2.4",
+                         "pytesseract==0.3.13",
                          "pyttsx",
                          "pyocr==0.8.5"
                          ]

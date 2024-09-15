@@ -5,4 +5,8 @@
 *.out
 **/screenshots
 **/data
+**/dist
+**/.dist
+**/venv
+**/.venv
 vgtranslate/config.json

@@ -11,8 +11,9 @@ License-File: LICENSE
 Requires-Dist: Pillow==10.4.0
 Requires-Dist: numpy==2.1.0
 Requires-Dist: opencv-python==3.4.18.65
-Requires-Dist: pytesseract==0.2.4
+Requires-Dist: pytesseract==0.3.13
 Requires-Dist: pyttsx
+Requires-Dist: pyocr==0.8.5
 
 # VGTranslate
 

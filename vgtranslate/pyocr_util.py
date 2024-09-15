@@ -28,6 +28,8 @@ def main():
 def image_to_boxes(image, lang=None, builder=None, mode=6):
     global handle
 
+    
+
     if builder is None:
         builder = pyocr.builders.WordBoxBuilder(mode)
     if handle is None:
@@ -40,7 +42,7 @@ def image_to_boxes(image, lang=None, builder=None, mode=6):
         clang = lang if lang else "eng"
         for lang_item in clang.split("+"):
             if lang_item not in pyocr.libtesseract.tesseract_raw.get_available_languages(handle):
-                raise pyocr.TesseractError(
+                raise pyocr.error.TesseractError(
                     "no lang",
                     f"language {lang_item} is not available"
                 )
@@ -57,7 +59,7 @@ def image_to_boxes(image, lang=None, builder=None, mode=6):
         pyocr.libtesseract.tesseract_raw.recognize(handle)
         res_iterator = pyocr.libtesseract.tesseract_raw.get_iterator(handle)
         if res_iterator is None:
-            raise pyocr.TesseractError(
+            raise pyocr.error.TesseractError(
                 "no script", "no script detected"
             )
         page_iterator = pyocr.libtesseract.tesseract_raw.result_iterator_get_page_iterator(

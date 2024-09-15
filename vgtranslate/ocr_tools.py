@@ -26,6 +26,9 @@ def setup_pytesseract(lang="eng"):
     if lang is None:
         lang = "eng"
 
+    if lang == "ja": #change me
+        lang = "jpn"    
+
     if os.name == "nt": 
         pyocr_util.load_tesseract_dll(lang=lang)
     else:
@@ -319,7 +322,7 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
 
     if min_pixels and pc < min_pixels:
         return {"blocks": []}
-    x = pyocr_util.image_to_data(image, lang=lang, mode=mode)
+    x = pyocr_util.image_to_boxes(image, lang=lang, builder=None,mode=mode)
     print ['ocr time', time.time()-t_]
 
     #x now holds the tesseract computed data in table csv (tab) format:

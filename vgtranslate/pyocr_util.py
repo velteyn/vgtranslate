@@ -2,8 +2,6 @@ import os
 
 from PIL import Image
 
-os.environ['TESSDATA_PREFIX'] = "bin"
-
 import ctypes
 
 import pyocr
@@ -27,8 +25,6 @@ def main():
 
 def image_to_boxes(image, lang=None, builder=None, mode=6):
     global handle
-
-    
 
     if builder is None:
         builder = pyocr.builders.WordBoxBuilder(mode)

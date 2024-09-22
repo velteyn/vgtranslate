@@ -155,7 +155,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         data = json.loads(data)
         
         start_time = time.time()
-        
+
         result = self._process_request(data, query_components)
         #result['auto'] = 'auto'
         print ("AUTO AUTO")
@@ -171,8 +171,8 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(output)
 
     def _process_request(self, body, query):
-        source_lang = query.get("source_lang")
-        target_lang = query.get("target_lang", "en")
+        source_lang = lang_2_to_3.get(query.get("source_lang"))
+        target_lang = lang_2_to_3.get(query.get("target_lang", "en"))
         mode = query.get("mode", "fast")
         request_output = query.get("output", "image,sound").lower()
         request_output = request_output.split(",")

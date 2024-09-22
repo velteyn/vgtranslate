@@ -8,7 +8,7 @@
 
         {
             "name": "Python: file corrente",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",

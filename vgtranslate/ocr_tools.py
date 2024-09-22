@@ -26,9 +26,6 @@ def setup_pytesseract(lang="eng"):
     if lang is None:
         lang = "eng"
 
-    if lang == "ja": #change me
-        lang = "jpn"    
-
     if os.name == "nt": 
         pyocr_util.load_tesseract_dll(lang=lang)
     else:
@@ -61,7 +58,7 @@ def tess_helper_windows(image, lang=None, mode=None,min_pixels=1):
     if min_pixels and pc < min_pixels:
         return list()
     x = pyocr_util.image_to_boxes(image, lang=lang, mode=mode)
-    print (['ocr time', time.time()-t_])
+    print('ocr time', time.time()-t_)
 
     found_chars = list()
     for word_box in x:     
@@ -323,50 +320,68 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
     if min_pixels and pc < min_pixels:
         return {"blocks": []}
     x = pyocr_util.image_to_boxes(image, lang=lang, builder=None,mode=mode)
-    print ['ocr time', time.time()-t_]
+    print('ocr time', time.time()-t_)
 
-    #x now holds the tesseract computed data in table csv (tab) format:
+    #x now holds the tesseract computed data in Box format
     results = {"blocks": []}
-    for i, line in enumerate(x.split("\n")):
-        if i > 0:
-            line = line[:-1]
+    current_block_num = 0
+    prev_bottom = None  # To plot the position of the last block
 
-            level, page_num, block_num, par_num, line_num, word_num, left, top, width, height, conf, text = line.split("\t")
-            block_num = int(block_num, 10)
-            while block_num > len(results['blocks']) -1:
-                results['blocks'].append({})
-            curr_block = results['blocks'][block_num]
+    for i, box in enumerate(x):
+        left = box.position[0][0]
+        top = box.position[0][1]
+        right = box.position[1][0]
+        bottom = box.position[1][1]
+        width = right - left
+        height = bottom - top
+        conf = box.confidence
+        text = box.content
+    
+        # If it is the first box or if the word is distant from the previous “bottom”
+        if prev_bottom is None or top - prev_bottom > height * 0.5:
+            current_block_num += 1
+            results['blocks'].append({})
+    
+        curr_block = results['blocks'][current_block_num - 1]
 
-            if not curr_bloc.get('text'):
-                curr_block['text'] = list()
-            else:
-                curr_block['text'].append(text)
-            if curr_block.get('confidence') is None:
-                curr_block['confidence'] = conf
-            elif curr_block['confidence'] > conf:
-                curr_block['confidence'] = conf
+        # Handle text
+        if 'text' not in curr_block:
+            curr_block['text'] = [text]
+        else:
+            curr_block['text'].append(text)
+    
+        # Handle confidence
+        if 'confidence' not in curr_block:
+            curr_block['confidence'] = conf
+        else:
+            curr_block['confidence'] = min(curr_block['confidence'], conf)
 
-            curr_bounding = {"x1": left, "y1": top, 
-                             "x2": left+width, "y2": height+top}
- 
-            if not curr_block['bounding_box']:
-                curr_block['bounding_box'] = curr_bounding
-            else:
-                if curr_bounding['x1'] < curr_block['bounding_box']['x1']:
-                    curr_block['bounding_box']['x1'] = curr_bounding['x1']
-                if curr_bounding['y1'] < curr_block['bounding_box']['y1']:
-                    curr_block['bounding_box']['y1'] = curr_bounding['y1']
-                if curr_bounding['x2'] > curr_block['bounding_box']['x2']:
-                    curr_block['bounding_box']['x2'] = curr_bounding['x2']
-                if curr_bounding['y2'] > curr_block['bounding_box']['y2']:
-                    curr_block['bounding_box']['y2'] = curr_bounding['y2']
+        # handle bounding boxes
+        curr_bounding = {
+            "x1": left, "y1": top, 
+            "x2": right, "y2": bottom
+        }
 
-    out_res = list()
-    for res in results['blocks']:
-        if res:
-            out_res.append(res)
-    results['blocks'] = out_res
+        if 'bounding_box' not in curr_block:
+            curr_block['bounding_box'] = curr_bounding
+        else:
+            if curr_bounding['x1'] < curr_block['bounding_box']['x1']:
+                curr_block['bounding_box']['x1'] = curr_bounding['x1']
+            if curr_bounding['y1'] < curr_block['bounding_box']['y1']:
+                curr_block['bounding_box']['y1'] = curr_bounding['y1']
+            if curr_bounding['x2'] > curr_block['bounding_box']['x2']:
+                curr_block['bounding_box']['x2'] = curr_bounding['x2']
+            if curr_bounding['y2'] > curr_block['bounding_box']['y2']:
+                curr_block['bounding_box']['y2'] = curr_bounding['y2']
+
+        # Update the bottom for the next iteration
+        prev_bottom = bottom
+
+    # Remove empty blocks
+    results['blocks'] = [res for res in results['blocks'] if res]
+
     return results
+
 
 
 

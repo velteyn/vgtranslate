@@ -10,6 +10,7 @@ import re
 import functools
 import os
 import base64
+
 from util import load_image, image_to_string, fix_neg_width_height,\
                  image_to_string_format, swap_red_blue, segfill,\
                  reduce_to_multi_color, reduce_to_text_color,\
@@ -323,6 +324,12 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             if error_string:
                 return_doc['error'] = error_string
             return return_doc
+        elif config.local_server_api_key_type == "easyocr":
+            data = ocr_tools.easyocr_helper(image_object, lang=source_lang)
+            data = self.translate_output(data, target_lang, source_lang=source_lang, google_translation_key=config.local_server_translation_key)
+            output_data = {}
+    
+
 
     def text_to_speech(self, data, target_lang=None, format_type=None):
         texts = list()
@@ -419,7 +426,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         if g_debug_mode == 1:
             image.show()
         data = ocr_tools.tess_helper_data(image, lang=source_lang,
-                                          mode=6, min_pixels=1)
+                                          mode=11, min_pixels=1)
         for block in data['blocks']:
             block['source_text'] = block['text']
             block['language'] = source_lang
@@ -539,7 +546,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         return output
 
     def _send_request(self, host, port, uri, method, body=None):
-        conn = httplib.HTTPSConnection(host, port)
+        conn = http.client.HTTPSConnection(host, port)
         if body is not None:
             conn.request(method, uri, body)
         else:

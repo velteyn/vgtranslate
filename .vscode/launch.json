@@ -14,7 +14,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${fileDirname}",
-            "purpose":["debug-in-terminal"]
+            "purpose":["debug-in-terminal"],
+            "args": ["--debug-extra"]
         }
     ]
 }

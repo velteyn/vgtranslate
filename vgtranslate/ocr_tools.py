@@ -5,6 +5,7 @@ import shlex
 import subprocess
 import sys
 import time
+import easyocr
 
 from PIL import Image
 from util import get_color_counts_simple, reduce_to_multi_color, segfill
@@ -50,7 +51,7 @@ def tess_helper_windows(image, lang=None, mode=None,min_pixels=1):
     setup_pytesseract(lang)
 
     if mode is None:
-        mode = 6
+        mode = 11
 
     t_ = time.time()
     pc = get_color_counts_simple(image, ["FFFFFF"], 2)
@@ -312,7 +313,7 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
     setup_pytesseract(lang)
 
     if mode is None:
-        mode = 6
+        mode = 11
 
     t_ = time.time()
     pc = get_color_counts_simple(image, ["FFFFFF"], 2)
@@ -383,8 +384,28 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
     return results
 
 
+def easyocr_helper(image, lang=None, min_confidence=0.6):
+    if lang == "jpn":
+        lang = "ja"
+   
+    reader = easyocr.Reader([lang], gpu=False)  
+    result = reader.readtext(image, detail=1)
+    
+    data = {"blocks": []}
+    for (bbox, text, confidence) in result:
+        if confidence >= min_confidence:  # Filtra per confidenza minima
+            block = {
+                "source_text": text,
+                "confidence": confidence,
+                "bounding_box": {
+                    "x1": bbox[0][0], "y1": bbox[0][1],
+                    "x2": bbox[2][0], "y2": bbox[2][1]
+                },
+                "language": lang
+            }
+            data["blocks"].append(block)
 
-
+    return data
 
 
 def tess_helper_server(image, lang=None, mode=None):

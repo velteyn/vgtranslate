@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import easyocr
+from numpy import asarray
 
 from PIL import Image
 from util import get_color_counts_simple, reduce_to_multi_color, segfill
@@ -389,10 +390,13 @@ def easyocr_helper(image, lang=None, min_confidence=0.6):
         lang = "ja"
    
     reader = easyocr.Reader([lang], gpu=False)  
-    result = reader.readtext(image, detail=1)
+
+    numpyImg = asarray(image)
+    result = reader.readtext(numpyImg, detail=1)
     
     data = {"blocks": []}
     for (bbox, text, confidence) in result:
+        print(f'Text: {text}, Confidence: {confidence}')
         if confidence >= min_confidence:  # Filtra per confidenza minima
             block = {
                 "source_text": text,

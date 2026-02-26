@@ -1,4 +1,4 @@
-import httplib
+import http.client
 import json
 import base64
 import io
@@ -47,20 +47,20 @@ class ServerClient:
         t_time = time.time()
         
         try:
-            conn = httplib.HTTPSConnection(config.server_host, config.server_port)
+            conn = http.client.HTTPSConnection(config.server_host, config.server_port)
             conn.request("POST", "/ocr", json.dumps(body))
             rep = conn.getresponse()
             d = rep.read()
             output = json.loads(d)
-            print ['Took: ', time.time()-t_time]
+            print(['Took: ', time.time()-t_time])
 
             return output
         except:
             import traceback
             traceback.print_exc()
-            print [body]
-            print "==="
-            print [d]
+            print([body])
+            print("===")
+            print([d])
             raise
 
     @classmethod
@@ -69,7 +69,7 @@ class ServerClient:
             "api_key": config.user_api_key,
         }
         try:
-            conn = httplib.HTTPSConnection(config.server_host, config.server_port)
+            conn = http.client.HTTPSConnection(config.server_host, config.server_port)
             conn.request("POST", "/quota", json.dumps(body))
             rep = conn.getresponse()
             d = rep.read()

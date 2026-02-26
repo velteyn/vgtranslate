@@ -1,5 +1,6 @@
 import json
 import imaging
+import os
 
 server_host = "ztranslate"
 server_port = 8888
@@ -45,10 +46,11 @@ def load_init():
     global ocr_box
 
     try:
-        config_file = json.loads(open("./config.json").read())
+        config_path = os.path.join(os.path.dirname(__file__), "config.json")
+        config_file = json.loads(open(config_path).read())
     except Exception as e:
-        print "Invalid config file specification:"
-        print e.message
+        print("Invalid config file specification:")
+        print(e)
         return False
 
     if "server_host" in config_file:
@@ -93,10 +95,10 @@ def load_init():
     if "ocr_box" in config_file:
         ocr_box = config_file['ocr_box']
 
-    print "using font: "+font
+    print(("using font: "+font))
     imaging.load_font(font, font_split, font_override)
-    print "config loaded"
-    print "===================="
+    print("config loaded")
+    print("====================")
     #print user_api_key
     return True
 

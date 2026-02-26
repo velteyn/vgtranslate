@@ -1,7 +1,7 @@
 import imaging
 import server_client
 import config
-import httplib
+import http.client
 import json
 
 class CallScreenshots:
@@ -48,7 +48,7 @@ class CallService:
         if body_kwargs:
             for key in body_kwargs:
                 body[key] = body_kwargs[key]
-        conn = httplib.HTTPSConnection("ztranslate.net", 443)
+        conn = http.client.HTTPSConnection("ztranslate.net", 443)
         conn.request("POST", url, json.dumps(body))
         rep = conn.getresponse()
         d = rep.read()

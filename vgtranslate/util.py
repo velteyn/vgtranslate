@@ -1,12 +1,11 @@
-import StringIO
 import io
 import base64
 import colorsys
 from PIL import Image, ImageDraw, ImageChops
 
 def swap_red_blue(image):
-    print image.mode
-    print image.split()
+    print((image.mode))
+    print((image.split()))
     r,g,b = image.split()
     return Image.merge('RGB', (b,g,r))
 
@@ -28,13 +27,13 @@ def load_image(image_data):
     return image
 
 def image_to_string(img):
-    output = StringIO.StringIO()
+    output = io.BytesIO()
     img.save(output, format="PNG")
     string = output.getvalue()
     return base64.b64encode(string)
 
 def image_to_string_format(img, format_type, mode="RGB"):
-    output = StringIO.StringIO()
+    output = io.BytesIO()
     try:
         img.convert(mode).save(output, format=format_type)
     except:
@@ -43,10 +42,10 @@ def image_to_string_format(img, format_type, mode="RGB"):
     return base64.b64encode(string)
 
 def image_to_string_png(img):
-    output = StringIO.StringIO()
+    output = io.BytesIO()
     img.convert("RGB").save(output, format="PNG")
     string = output.getvalue()
-    print("png length: ", len(string))
+    print(("png length: ", len(string)))
     return base64.b64encode(string)
 
 def color_hex_to_byte(text_color):
@@ -117,7 +116,7 @@ def segfill(image, mark_color, target_color):
                 last_red = False
 
    
-    for entry in new_h_range.keys():
+    for entry in list(new_h_range.keys()):
         if entry > 0:
             new_h_range[entry-1] = 1
     new_h_range = sorted(new_h_range.keys())
@@ -200,7 +199,7 @@ def reduce_to_multi_color(img, bg, colors_map, threshold):
             else:
                 tc, tc_map = entry, entry
 
-            if isinstance(tc, basestring):           
+            if isinstance(tc, str):
                 tc = color_hex_to_byte(tc)
 
                 rr = r-tc[0]
@@ -352,7 +351,7 @@ def fix_bounding_box(img, bounding_box):
     w = img.width
     h = img.height
     for key in bounding_box:
-        if isinstance(bounding_box[key], basestring):
+        if isinstance(bounding_box[key], str):
             bounding_box[key] = int(bounding_box[key])
     if 'w' in bounding_box:
         if bounding_box['x'] < 0:
@@ -459,7 +458,7 @@ def tint_image(image, color, border=2):
 def black_expand(image, mark_color, target_colors):
     w = image.width
     h = image.height
-    if isinstance(target_colors, basestring):
+    if isinstance(target_colors, str):
         target_colors = [target_colors]
 
     mark_color = tuple(color_hex_to_byte(mark_color)[0:3])
@@ -496,7 +495,7 @@ def black_expand(image, mark_color, target_colors):
                         if j < h-1 and image.getpixel((i, j+1)) in target_colors:
                             image.putpixel((i,j+1), mark_color)
                 break
-    print "Black expand took: "+str(time.time()-t_time)
+    print(("Black expand took: "+str(time.time()-t_time)))
     return image
 
 def expand_vertical(img, bg_color, target_color):
@@ -541,7 +540,7 @@ def expand_vertical(img, bg_color, target_color):
                             upset[j] = 1
                 for key in upset:
                     image.putpixel((i, key), target)
-    print "vert expand ", time.time()-t_time
+    print(("vert expand ", time.time()-t_time))
     return image
    
 
@@ -590,7 +589,7 @@ def expand_horizontal(img, bg_color, target_color):
                             upset[i] = 1
                 for key in upset:
                     image.putpixel((key, j), target)
-    print "horizontal expand ", time.time()-t_time
+    print(("horizontal expand ", time.time()-t_time))
     return image
 
 def draw_solid_box(image, color, bb):

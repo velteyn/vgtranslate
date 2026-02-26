@@ -129,8 +129,8 @@ boxes = non_max_suppression(np.array(rects), probs=confidences)
 results = []
  
 # loop over the bounding boxesa
-print boxes
-print time.time()-t_time
+print(boxes)
+print((time.time()-t_time))
 for (startX, startY, endX, endY) in boxes:
 	# scale the bounding box coordinates based on the respective
 	# ratios
@@ -170,13 +170,13 @@ for (startX, startY, endX, endY) in boxes:
 
 # sort the results bounding box coordinates from top to bottom
 results = sorted(results, key=lambda r:r[0][1])
-print ("Took", time.time()-t_time)
+print(("Took", time.time()-t_time))
 # loop over the results
 for ((startX, startY, endX, endY), text) in results:
 	# display the text OCR'd by Tesseract
 	print("OCR TEXT")
 	print("========")
-	print("{}\n".format([text]))
+	print(("{}\n".format([text])))
  
 	# strip out non-ASCII text so we can draw the text on the image
 	# using OpenCV, then draw the text and a bounding box surrounding

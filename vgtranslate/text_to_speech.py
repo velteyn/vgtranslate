@@ -1,16 +1,16 @@
 import json
 import time
 import hashlib
-import httplib
+import http.client
 import base64
 import config
 #import gender_guesser.detector as gender
 
 class TextToSpeech:
     @classmethod
-    def text_to_speech_api(cls, text, name="", source_lang=None, async=False):
+    def text_to_speech_api(cls, text, name="", source_lang=None, async_mode=False):
         voice, pitch, speed = cls.process_name_voice(name)
-        print("LANG", source_lang)
+        print(("LANG", source_lang))
         if source_lang is None:
             source_lang = "en-US"
         t_time = time.time()
@@ -36,7 +36,7 @@ class TextToSpeech:
         body = json.dumps(doc)
         print("----------------")
         print(body)
-        conn = httplib.HTTPSConnection("texttospeech.googleapis.com", 443)
+        conn = http.client.HTTPSConnection("texttospeech.googleapis.com", 443)
         conn.request("POST", uri, body)
         rep = conn.getresponse()
         data = rep.read()
@@ -62,7 +62,7 @@ class TextToSpeech:
         #res = d.get_gender(name)
         #print ['gender:', res, name]
         res = "unknown"
-        r = int(hashlib.sha256(name).hexdigest(), 16)
+        r = int(hashlib.sha256(name.encode('utf-8')).hexdigest(), 16)
         if res in ["male", "mostly_male", "andy", "unknown"]:
             voice = voices[r%4]
         else:

@@ -1,14 +1,14 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
-import BaseHTTPServer
-import HTMLParser
+import http.server
+import html.parser
 import time
 import json
 import config
 import threading
-import httplib
+import http.client
 import functools
-import urlparse
+import urllib.parse
 import os
 import base64
 from util import load_image, image_to_string, fix_neg_width_height,\
@@ -59,7 +59,7 @@ class ServerOCR:
         if colors.lower().strip() == "detect":
             pass
         elif colors:
-            print ("Pre process ", colors)
+            print(("Pre process ", colors))
             try:
                 colors = [x.strip() for x in re.split(",| |;", colors)]
                 new_colors = list()
@@ -79,7 +79,7 @@ class ServerOCR:
                             num = 32
                         new_colors.append([color, num])
                 img = reduce_to_text_color(img, new_colors, bg)
-                print "succ=true"
+                print("succ=true")
             except:
                 raise
         return bg, image_to_string(img.convert("RGBA"))
@@ -132,42 +132,42 @@ class ServerOCR:
 
 
 
-class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class APIHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write("<html><head><title></title></head></html>")
-        self.wfile.write("<body>yo!</body></html>")
+        self.wfile.write("<html><head><title></title></head></html>".encode('utf-8'))
+        self.wfile.write("<body>yo!</body></html>".encode('utf-8'))
         
     def do_POST(self):
-        print "____"
-        query = urlparse.urlparse(self.path).query
+        print("____")
+        query = urllib.parse.urlparse(self.path).query
         if query.strip():
             query_components = dict(qc.split("=") for qc in query.split("&"))
         else:
             query_components = {}
-        content_length = int(self.headers.getheader('content-length', 0))
+        content_length = int(self.headers.get('content-length', 0))
         data = self.rfile.read(content_length);
-        print data[:100]
-        print content_length
-        print data[-100:]
+        print((data[:100]))
+        print(content_length)
+        print((data[-100:]))
         data = json.loads(data)
         
         start_time = time.time()
         
         result = self._process_request(data, query_components)
         #result['auto'] = 'auto'
-        print "AUTO AUTO"
-        print ['Request took: ', time.time()-start_time]
+        print("AUTO AUTO")
+        print(['Request took: ', time.time()-start_time])
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        output = json.dumps(result)
-        print ['out:', output[-100:]]
+        self.send_header("Content-type", "application/json")
+        output = json.dumps(result).encode('utf-8')
+        print(['out:', output[-100:]])
         self.send_header("Content-Length", len(output))
         self.end_headers()
 
-        print "Output length: "+str(len(output))
+        print(("Output length: "+str(len(output))))
         self.wfile.write(output)
 
     def _process_request(self, body, query):
@@ -196,12 +196,12 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                      else:
                          request_out_dict['image'] = entry
 
-        print request_output
+        print(request_output)
         pixel_format = "RGB"
         image_data = body.get("image")
         
         image_object = load_image(image_data).convert("RGB")
-        print("w: "+str(image_object.width)+" h: "+str(image_object.height))
+        print(("w: "+str(image_object.width)+" h: "+str(image_object.height)))
         if pixel_format == "BGR": 
             image_object = image_object.convert("RGB")
             image_object = swap_red_blue(image_object)
@@ -233,7 +233,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                                                request_output=request_output, body_kwargs=body_kwargs)
             return output
         elif config.local_server_api_key_type == "google":
-            print "using google......"
+            print("using google......")
             if "image" not in request_out_dict:
                 image_object = load_image(image_data).convert("LA").convert("RGB")
                 image_object = image_object.convert("P", palette=Image.ADAPTIVE, colors=32)
@@ -252,7 +252,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if config.ocr_box:
                 image_data = ServerOCR._preprocess_box(image_data, config.ocr_box, bg)
 
-            print len(image_data)
+            print((len(image_data)))
 
             api_ocr_key = config.local_server_ocr_key
             api_translation_key = config.local_server_translation_key
@@ -294,7 +294,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 output_data['error'] = error_string
             return output_data
 
-        elif config.local_server_api_key_type == "tess_google":
+        elif config.local_server_api_key_type in ["tess_google", "easyocr", "mangaocr"]:
             image_object = load_image(image_data).convert("P", palette=Image.ADAPTIVE)
             image_data = image_to_string(image_object)
  
@@ -339,10 +339,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             text_to_say = "".join(texts).replace('"', " [] ")
             cmd = "espeak "+'"'+text_to_say+'"'+" --stdout > tts_out.wav"
             os.system(cmd)#, shell=True)
-            wav_data = open("tts_out.wav").read()
+            wav_data = open("tts_out.wav", "rb").read()
         else:
             text_to_say = " ".join(texts2).replace("...", " [] ").replace(" ' s ", "'s ").replace(" ' t ", "'t ").replace(" ' re ", "'re ").replace(" ' m ", "'m ").replace("' ", "").replace(" !", "!").replace('"', " [] ")
-            print [text_to_say]
+            print([text_to_say])
             wav_data = TextToSpeech.text_to_speech_api(text_to_say, source_lang=target_lang)
 
         wav_data = self.fix_wav_size(wav_data)
@@ -350,22 +350,17 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         return wav_data
 
     def fix_wav_size(self, wav):
+        if not wav:
+            return b""
         def tb(size):
             bs = size%256, int(size/256)%256, int(size/(256**2))%256, int(size/(256**3))%256
             return bytearray(bs)
         size1 = tb(len(wav))
         size2 = tb(len(wav)-44)
         s = bytearray(wav)
-        s[4]=size1[0]
-        s[5]=size1[1]
-        s[6]=size1[2]
-        s[7]=size1[3]
-
-        s[40]=size2[0]
-        s[41]=size2[1]
-        s[42]=size2[2]
-        s[43]=size2[3]
-        return str(s)
+        s[4:8] = size1
+        s[40:44] = size2
+        return bytes(s)
 
 
     def google_ocr(self, image_data, source_lang, ocr_api_key):
@@ -397,7 +392,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return {}, {}
 
     def tess_ocr(self, image_data, source_lang, ocr_processor):
-        if isinstance(ocr_processor, basestring):
+        if isinstance(ocr_processor, str):
             try:
                 f = json.loads(open(ocr_processor).read())
             except:
@@ -414,13 +409,23 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                               kwargs['threshold'])
             elif step['action'] == 'segFill':
                 image = segfill(image, kwargs['base'], kwargs['color'])
+            elif step['action'] == 'upscale':
+                factor = kwargs.get('factor', 2)
+                w, h = image.size
+                image = image.resize((int(w*factor), int(h*factor)), Image.LANCZOS)
             if g_debug_mode == 2:
                 image.show()
 
         if g_debug_mode == 1:
             image.show()
-        data = ocr_tools.tess_helper_data(image, lang=source_lang,
-                                          mode=6, min_pixels=1)
+
+        if config.local_server_api_key_type == "easyocr":
+            data = ocr_tools.easyocr_helper_data(image, lang=source_lang)
+        elif config.local_server_api_key_type == "mangaocr":
+            data = ocr_tools.manga_ocr_helper_data(image)
+        else:
+            data = ocr_tools.tess_helper_data(image, lang=source_lang,
+                                              mode=6, min_pixels=1)
         for block in data['blocks']:
             block['source_text'] = block['text']
             block['language'] = source_lang
@@ -486,10 +491,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         else:
             translates = {"data": {"translations": [{"translatedText": x['source_text'], "detectedSourceLanguage": "En"} for x in data['blocks']]}}
-            print [x['translatedText'] for x in translates['data']['translations']]
+            print([x['translatedText'] for x in translates['data']['translations']])
         new_blocks = list()
         for i, block in enumerate(data['blocks']):
-            if not 'translation' in block or isinstance(block['translation'], basestring):
+            if not 'translation' in block or isinstance(block['translation'], str):
                 block['translation'] = dict()
             block['translation'][target_lang.lower()] =\
                     translates['data']['translations'][i]['translatedText']
@@ -506,7 +511,7 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         uri+= google_translation_key
         for s in strings:
             try:
-                print s
+                print(s)
             except:
                 pass
         body = '{\n'
@@ -517,16 +522,16 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         data = self._send_request("translation.googleapis.com", 443, uri, "POST", body)
         output = json.loads(data)
-        print "==========="
+        print("===========")
 
         if "error" in output:
-            print output['error']
+            print((output['error']))
             return {}
 
         for x in output['data']['translations']:
-            x['translatedText'] = HTMLParser.HTMLParser().unescape(x['translatedText'])
+            x['translatedText'] = html.parser.HTMLParser().unescape(x['translatedText'])
             try:
-                print x['translatedText']
+                print((x['translatedText']))
             except:
                 pass
         
@@ -540,8 +545,10 @@ class APIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         return output
 
     def _send_request(self, host, port, uri, method, body=None):
-        conn = httplib.HTTPSConnection(host, port)
+        conn = http.client.HTTPSConnection(host, port)
         if body is not None:
+            if isinstance(body, str):
+                body = body.encode('utf-8')
             conn.request(method, uri, body)
         else:
             conn.request(method, uri)
@@ -568,9 +575,9 @@ def start_api_server2():
     global httpd_server
     host = config.local_server_host
     port = config.local_server_port      
-    server_class = BaseHTTPServer.HTTPServer
+    server_class = http.server.HTTPServer
     httpd_server = server_class((host, port), APIHandler)
-    print "server start"
+    print("server start")
     try:
         httpd_server.serve_forever()
     except KeyboardInterrupt:
@@ -583,23 +590,23 @@ def main():
         return
     host = config.local_server_host
     port = config.local_server_port 
-    print "host", host
-    print "port", port
-    server_class = BaseHTTPServer.HTTPServer
+    print(("host", host))
+    print(("port", port))
+    server_class = http.server.HTTPServer
     httpd = server_class((host, port), APIHandler)
     if "--debug-extra" in sys.argv:
         g_debug_mode = 2
     elif "--debug" in sys.argv:
         g_debug_mode = 1
 
-    print "server start"
+    print("server start")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
 
     httpd.server_close()
-    print 'end'
+    print('end')
 
 if __name__=="__main__":
     main()

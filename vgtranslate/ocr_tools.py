@@ -5,6 +5,7 @@ import io
 import sys
 import os
 import shlex
+import numpy as np
 import subprocess
 
 from util import get_color_counts_simple, reduce_to_multi_color, segfill
@@ -58,7 +59,7 @@ def tess_helper_windows(image, lang=None, mode=None,min_pixels=1):
     if min_pixels and pc < min_pixels:
         return list()
     x = pyocr_util.image_to_boxes(image, lang=lang, mode=mode)
-    print ['ocr time', time.time()-t_]
+    print(['ocr time', time.time()-t_])
 
     found_chars = list()
     for word_box in x:     
@@ -155,7 +156,7 @@ def tess_helper_linux(image, lang=None, mode=None, min_pixels=1):
 
             if i == 1:
                 raise
-            print 'tttttttttttttttttttttttt'
+            print('tttttttttttttttttttttttt')
             setup_pytesseract()
 
 
@@ -170,7 +171,11 @@ def tess_helper_linux(image, lang=None, mode=None, min_pixels=1):
     last_x = None
     if x.strip():
         for line in x.split("\n"):
+            if not line.strip():
+                continue
             split = line.split(" ")
+            if len(split) < 6:
+                continue
             char = split[0]
             coords = [int(i) for i in split[1:5]]
 
@@ -217,7 +222,7 @@ def tess_helper_linux(image, lang=None, mode=None, min_pixels=1):
         if curr_line:
             found_lines.append([curr_line, curr_box])
     for l in found_lines:
-        print l
+        print(l)
     return found_lines
 
 
@@ -251,7 +256,7 @@ def tess_helper_data_linux(image, lang=None, mode=None, min_pixels=1):
 
             if i == 1:
                 raise
-            print 'failed tesseract, retying...'
+            print('failed tesseract, retying...')
             setup_pytesseract()
  
     #x now holds the tesseract computed data in table csv (tab) format:
@@ -260,6 +265,8 @@ def tess_helper_data_linux(image, lang=None, mode=None, min_pixels=1):
         if i > 0:
             split = line.split("\t")
             
+            if len(split) < 11:
+                continue
             level, page_num, block_num, par_num, line_num, word_num, left, top, width, height, conf = split[:11]
             if len(split) > 11:
                 text = split[11]
@@ -320,7 +327,7 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
     if min_pixels and pc < min_pixels:
         return {"blocks": []}
     x = pyocr_util.image_to_data(image, lang=lang, mode=mode)
-    print ['ocr time', time.time()-t_]
+    print(['ocr time', time.time()-t_])
 
     #x now holds the tesseract computed data in table csv (tab) format:
     results = {"blocks": []}
@@ -328,16 +335,18 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
         if i > 0:
             line = line[:-1]
 
-            level, page_num, block_num, par_num, line_num, word_num, left, top, width, height, conf, text = line.split("\t")
+            split = line.split("\t")
+            if len(split) < 12:
+                continue
+            level, page_num, block_num, par_num, line_num, word_num, left, top, width, height, conf, text = split[:12]
             block_num = int(block_num, 10)
             while block_num > len(results['blocks']) -1:
                 results['blocks'].append({})
             curr_block = results['blocks'][block_num]
 
-            if not curr_bloc.get('text'):
+            if not curr_block.get('text'):
                 curr_block['text'] = list()
-            else:
-                curr_block['text'].append(text)
+            curr_block['text'].append(text)
             if curr_block.get('confidence') is None:
                 curr_block['confidence'] = conf
             elif curr_block['confidence'] > conf:
@@ -346,7 +355,7 @@ def tess_helper_data_windows(image, lang=None, mode=None, min_pixels=1):
             curr_bounding = {"x1": left, "y1": top, 
                              "x2": left+width, "y2": height+top}
  
-            if not curr_block['bounding_box']:
+            if not curr_block.get('bounding_box'):
                 curr_block['bounding_box'] = curr_bounding
             else:
                 if curr_bounding['x1'] < curr_block['bounding_box']['x1']:
@@ -395,7 +404,11 @@ def tess_helper_server(image, lang=None, mode=None):
     last_x = None
     if x.strip():
         for line in x.split("\n"):
+            if not line.strip():
+                continue
             split = line.split(" ")
+            if len(split) < 6:
+                continue
             char = split[0]
             coords = [int(i) for i in split[1:5]]
             coords = [coords[0], coords[3], coords[2], coords[1]]
@@ -441,6 +454,88 @@ def tess_helper_server(image, lang=None, mode=None):
         if curr_line:
             found_lines.append([curr_line, curr_box])
     return found_lines
+
+_easyocr_readers = {}
+
+def get_easyocr_reader(lang):
+    import easyocr
+    # map jpn to ja
+    if lang == 'jpn':
+        langs = ('ja',)
+    elif lang == 'eng':
+        langs = ('en',)
+    else:
+        langs = (lang,) if isinstance(lang, str) else tuple(lang)
+
+    if langs not in _easyocr_readers:
+        _easyocr_readers[langs] = easyocr.Reader(list(langs), gpu=False)
+    return _easyocr_readers[langs]
+
+def easyocr_helper(image, lang='jpn'):
+    reader = get_easyocr_reader(lang)
+    # Detail=1 returns [[bbox], text, confidence]
+    result = reader.readtext(np.array(image.convert('RGB')), detail=1)
+
+    found_lines = list()
+    for (bbox, text, prob) in result:
+        # bbox is [[x, y], [x, y], [x, y], [x, y]]
+        x1 = min(p[0] for p in bbox)
+        y1 = min(p[1] for p in bbox)
+        x2 = max(p[0] for p in bbox)
+        y2 = max(p[1] for p in bbox)
+        found_lines.append([text, [int(x1), int(y1), int(x2), int(y2)]])
+
+    return found_lines
+
+_manga_ocr = None
+
+def get_manga_ocr():
+    global _manga_ocr
+    if _manga_ocr is None:
+        from manga_ocr import MangaOcr
+        _manga_ocr = MangaOcr()
+    return _manga_ocr
+
+def manga_ocr_helper(image):
+    mocr = get_manga_ocr()
+    text = mocr(image)
+
+    # MangaOCR doesn't provide bounding boxes, so we return the whole image as a block
+    found_lines = [[text, [0, 0, image.width, image.height]]]
+
+    return found_lines
+
+def easyocr_helper_data(image, lang='jpn'):
+    reader = get_easyocr_reader(lang)
+    result = reader.readtext(np.array(image.convert('RGB')), detail=1)
+
+    results = {"blocks": []}
+    for (bbox, text, prob) in result:
+        x1 = min(p[0] for p in bbox)
+        y1 = min(p[1] for p in bbox)
+        x2 = max(p[0] for p in bbox)
+        y2 = max(p[1] for p in bbox)
+
+        block = {
+            "text": text,
+            "bounding_box": {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2)},
+            "confidence": prob
+        }
+        results["blocks"].append(block)
+    return results
+
+def manga_ocr_helper_data(image):
+    mocr = get_manga_ocr()
+    text = mocr(image)
+
+    results = {"blocks": [
+        {
+            "text": text,
+            "bounding_box": {"x1": 0, "y1": 0, "x2": image.width, "y2": image.height},
+            "confidence": 1.0
+        }
+    ]}
+    return results
 
 def main():
     image= Image.open("images.png").convert("P", palette=Image.ADAPTIVE)

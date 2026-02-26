@@ -21,8 +21,9 @@ def load_font(font_name, font_split=" ", font_override=False):
     
     FONT = font_name
     OVERRIDE_FONT = font_override
-    print [FONT, OVERRIDE_FONT]
-    FONTS = [ImageFont.truetype("./fonts/"+FONT, x+8) for x in range(32)]
+    print([FONT, OVERRIDE_FONT])
+    font_path = os.path.join(os.path.dirname(__file__), "fonts", FONT)
+    FONTS = [ImageFont.truetype(font_path, x+8) for x in range(32)]
     FONTS_WH = list()
     fill_fonts_wh()
 
@@ -42,9 +43,11 @@ def fill_fonts_wh():
         t = 0
         avg_w = 0
         avg_h = 0
-        for char in u"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz?!.,;'\"\u624b":
+        for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz?!.,;'\"\\u624b":
             t+=1
-            size_x, size_y = draw.textsize(char, font=FONTS[i])
+            bbox = draw.textbbox((0, 0), char, font=FONTS[i])
+            size_x = bbox[2] - bbox[0]
+            size_y = bbox[3] - bbox[1]
             avg_w += size_x
             avg_h += size_y
 
@@ -69,13 +72,16 @@ def wrap_text(text, font, draw, w):
     outline = ""
     outtext = ""
     for word in words:
-        size = draw.textsize(outline+" "+word, font=font)
-        if size[0] < w:
-            outline+=FONT_SPLIT+word
+        # Use textlength for faster width calculation if available,
+        # but textbbox is safer for complex fonts.
+        bbox = draw.textbbox((0, 0), outline + FONT_SPLIT + word, font=font)
+        size_w = bbox[2] - bbox[0]
+        if size_w < w:
+            outline += FONT_SPLIT + word
         else:
-            outtext+=outline+"\n"
+            outtext += outline + "\n"
             outline = word
-    outtext+=FONT_SPLIT+outline
+    outtext += FONT_SPLIT + outline
     return outtext.strip()
 
 def get_approximate_font(text, w, h):
@@ -98,14 +104,17 @@ def get_approximate_font(text, w, h):
     return best
 
 def get_text_wh(text, font, draw, mw):
-    height = font.getsize("A")[1]
-    h = len(text.strip().split("\n"))*(height+1)
+    bbox_a = draw.textbbox((0, 0), "A", font=font)
+    line_height = bbox_a[3] - bbox_a[1]
+    lines = text.strip().split("\n")
+    h = len(lines) * (line_height + 1)
     w = 0
-    for line in text.strip().split("\n"):
-        cw = draw.textsize(line, font=font)
-        if cw > w and cw <= mw:
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        cw = bbox[2] - bbox[0]
+        if cw > w:
             w = cw
-    return w,h
+    return w, h
     
 def drawTextBox(draw, text, x,y, w, h, font=None, font_size=None, font_color=None, 
                 confid=1, exact_font=None):
@@ -260,7 +269,7 @@ class ImageItterator:
                 orders.append(int(data[5].partition(".")[0]))#seconds
                 orders.append(".png")             
         except:
-            print date, len(orders)
+            print((date, len(orders)))
             while len(orders) < 6:
                 orders.append(0)
             if "_" in date:

@@ -27,10 +27,7 @@ if exist "%VENV_PY%" (
 )
 
 :venv_ok
-for /f "tokens=1,2" %%a in ('"%VENV_PY%" -c "import sys;print(sys.version_info[0],sys.version_info[1])"') do (
-    set "PY_MAJOR=%%a"
-    set "PY_MINOR=%%b"
-)
+for /f "usebackq tokens=1,2" %%a in (`"%VENV_PY%" -c "import sys;print(sys.version_info[0],sys.version_info[1])"`) do set "PY_MAJOR=%%a" & set "PY_MINOR=%%b"
 echo Python in .venv: %PY_MAJOR%.%PY_MINOR%
 
 set "EXTRAS=%LITE_EXTRAS%"

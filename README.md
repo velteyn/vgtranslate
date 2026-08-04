@@ -1,85 +1,79 @@
 # VGTranslate
 
-Lightweight server for doing OCR and machine translation on game screen captures.  Suitable as an endpoint for real time usage, and can act as an open-source alternative to the ztranslate client.  Uses python 3.11.  Licensed under GNU GPLv3.
+A local-first RetroArch AI Service translator: Japanese game text becomes an
+English overlay, powered entirely by free software running on your own machine.
 
-# Installation
+It implements the [libretro AI Service wire protocol](https://docs.libretro.com/guides/ai-service/)
+on `http://localhost:4404`. RetroArch pauses the game, POSTs a screenshot of the
+current frame, and vgtranslate returns a translated overlay at native resolution
+(24-bit BGR BMP by default) that RetroArch renders on top of the original.
 
-1. Download this repo and extract it.  If you have git you can do: `git clone https://gitlab.com/spherebeaker/vgtranslate.git` instead.
-2. Copy `default_config.json` to `config.json` (in the vgtranslate folder) and modify the configuration to point to the OCR/MT apis you want to use (see the Examples section below).
-3. Install python (v2.7) to your system.
-4. Run `python setup.py install` in the base folder to install the required packages (in a virtualenv).
-5. Run `python serve.py` in the vgtranslate directory.
-
-If you have trouble running the above code on windows, you can try running a pre-built release:
-
-1. Download a release here: [vgtranslate_server_v1.05.zip](https://ztranslate.net/download/vgtranslate_serve_v1.05.zip?owner=)
-2. Change the `config.json` as in following section.
-3. Run `serve.exe`.
-
-If you run into trouble, you can join the RetroArch discord or the ZTranslate discord ( https://ztranslate.net/community ) and ask @Beaker for help.
-
-
-# Example configurations for config.json:
-
-You can use either use Google API keys yourself to run vgtranslate, or use an account with the ztranslate.net service.  The ZTranslate service in this case basically acts like a standalone vgtranslate server that's setup with it's own Google API keys.  The main purpose being that you can try out vgtranslate without having to sign up to Google Cloud first, and getting some savings with a volume discount on the Google Cloud api calls.  To get an API key for ZTranslate, go to https://ztranslate.net , sign up, and go to the Settings page.  The ZTranslate API key will be at the bottom.
-
-As of writing, ztranslate.net allows 10,000 calls per month (for free), while if you sign up for Google Cloud, you get $300 worth of API credits.  Each vgtranslate call costs about 0.2-0.3 cents, so it makes sense to use the Google API keys directly instead of pooling than with ZTranslate, at least at first.
-
-See: https://cloud.google.com/billing/docs/how-to/manage-billing-account about how to create a Google Cloud account and https://cloud.google.com/docs/authentication/api-keys about creating Google Cloud API keys
-
-If using Google Cloud keys, be sure to set the API key to not have restricted APIs at all, or at least include the Cloud Vision API, Cloud Translation API, and Cloud Text-to-Speech API in the list of allowed APIs. 
-
-### Using ztranslate.net
 ```
-{
-    "server_host": "ztranslate.net",
-    "server_port": 443,
-    "default_target": "En",
-    "local_server_api_key_type": "ztranslate",
-    "local_server_host": "localhost",
-    "local_server_port": 4404,
-    "user_api_key": "ztranslate.net api key goes here",
-    "local_server_enabled": true
-}
+RetroArch (paused frame)
+   │ POST /  image=<base64>&target_lang=en&output=image
+   ▼
+vgtranslate ── quality: vision LLM reads + translates the whole frame (one shot)
+            │  fast:     OCR detect/recognize → text MT per region
+            ▼
+   { image: <overlay BMP>, image_width, image_height, image_format, ... }
 ```
 
-### Using Google OCR and translation
-```
-{
-    "default_target": "En",
-    "local_server_api_key_type": "google",
-    "local_server_ocr_key": "google cloud vison api key",
-    "local_server_host": "localhost",
-    "local_server_port": 4404,
-    "local_server_translation_key": "google cloud translation api key",
-    "local_server_enabled": true
-}
+## Two translation paths
+
+| Path | Pipeline | When to use |
+|---|---|---|
+| **quality** (default) | A local vision LLM (LM Studio / Ollama) reads every text region and translates it in one shot; it supplies the text boxes | Most games; best accuracy, needs a GPU |
+| **fast** | RapidOCR (CPU) detects/recognizes, then Sugoi (JP→EN) or Argos Translate translates per region | Older machines, or when you want no LLM at all |
+
+Games can be mixed: profiles let you pick a path, OCR engine, translator, upscale
+factor and glossary per game (e.g. SRW → quality; Megaman pixel fonts → manga-ocr).
+
+## Quick start
+
+```bash
+# 1. install (extras pick the engines you want)
+pip install "vgtranslate[ocr,ocr-manga,mt-sugoi,tray]"
+
+# 2. start the server (auto-detects LM Studio on :1234 / Ollama on :11434)
+vgtranslate serve --detect-llm
 ```
 
-### Using tesseract locally, and then Google translate (experimental):
+In RetroArch: **Settings → AI Service**, enable it and set **AI Service URL** to
+`http://localhost:4404/`. Pause the game (default `F1`... consult your keybinds),
+and the overlay appears.
+
+Run `vgtranslate status` to see which engines are available on your machine.
+
+## Dependencies (all optional extras)
+
+| Extra | Engines |
+|---|---|
+| `ocr` | RapidOCR (ONNX, CPU) — default OCR |
+| `ocr-manga` | manga-ocr — stylized/pixel Japanese text |
+| `tesseract` | Tesseract via pytesseract — fallback OCR |
+| `mt-sugoi` | Sugoi — offline JP→EN text MT |
+| `mt-argos` | Argos Translate — offline, many languages |
+| `tray` | pystray + Tkinter system-tray app |
+| `all` | everything above |
+
+Base install (`fastapi`, `uvicorn`, `httpx`, `Pillow`, `pydantic`) is enough for
+the server to run; the quality path needs an LLM server (see docs).
+
+## Command line
+
 ```
-{
-    "default_target": "En",
-    "local_server_api_key_type": "tess_google",
-    "local_server_host": "localhost",
-    "local_server_ocr_processor": {
-      "source_lang": "jpn",
-      "pipeline": [
-        {"action": "reduceToMultiColor",
-         "options": {
-           "base": "000000",
-           "colors": [
-             ["FFFFFF", "FFFFFF"]
-           ],
-           "threshold": 32
-         }
-        }
-      ]
-    },
-    "local_server_port": 4404,
-    "local_server_translation_key": "google cloud translation api key",
-    "local_server_enabled": true
-}
+vgtranslate serve [--detect-llm]   run the translation server
+vgtranslate tray                   system-tray app (start/stop, logs, settings)
+vgtranslate bench run <dataset>    benchmark a profile against ground truth
+vgtranslate status                 engine availability + LLM connection
+vgtranslate detect                 probe local LLM endpoints
 ```
 
+## Documentation
 
+- [Installation & run](docs/install-and-run.md) — setup, LM Studio model, RetroArch config
+- [Configuration, profiles & glossary](docs/config-and-profiles.md)
+
+## License
+
+GNU GPL v3 — see [LICENSE](LICENSE).

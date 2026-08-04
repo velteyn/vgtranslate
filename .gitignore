@@ -1,8 +1,12 @@
 #####
 *.pyc
+__pycache__/
 *.zip
 *.ztp
 *.out
 **/screenshots
 **/data
-vgtranslate/config.json
+bench-out/
+*.egg-info/
+build/
+dist/

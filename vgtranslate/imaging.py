@@ -1,311 +1,235 @@
-from PIL import Image, ImageFont, ImageDraw
+"""Image utilities: frame encode/decode, upscaling, preprocessing, overlay rendering.
+
+The overlay renderer (fitted text into detected boxes) is a port of the fitted-text
+concepts from the legacy ``imaging.py``/``util.py``, using the bundled fonts.
+"""
+
+from __future__ import annotations
+
+import base64
+import io
 import os
-import datetime
-import time
-from util import color_hex_to_byte
+from pathlib import Path
+from typing import Optional
+
+from PIL import Image, ImageDraw, ImageFont
+
+from .blocks import Block
+
+FONTS_DIR = Path(__file__).parent / "fonts"
+
+_LATIN_FONT = "Roboto-Regular.ttf"
+_LATIN_BOLD_FONT = "Roboto-Bold.ttf"
+_CJK_FONT = "NotoSansCJKtc-Regular.ttf"
+_CJK_BOLD_FONT = "NotoSansCJKtc-Bold.ttf"
+
+_FONT_SIZES = (6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48)
+
+CJK_RANGES = (
+    "\u3040-\u30ff",  # hiragana + katakana
+    "\u3400-\u4dbf",  # CJK ext A
+    "\u4e00-\u9fff",  # CJK unified
+    "\uf900-\ufaff",  # CJK compat
+    "\uff00-\uffef",  # fullwidth forms
+)
+CJK_RE = None
 
 
-FONT = "RobotoCondensed-Bold.ttf"
-FONTS = list()
-FONTS_WH = list()
-FONT_SPLIT = " "
-OVERRIDE_FONT = False
+def _cjk_re():
+    global CJK_RE
+    if CJK_RE is None:
+        import re
 
-def load_font(font_name, font_split=" ", font_override=False):
-    global FONT
-    global FONTS
-    global FONTS_WH
-    global FONT_SPLIT
-    global OVERRIDE_FONT
-    FONT_SPLIT = font_split
-    
-    FONT = font_name
-    OVERRIDE_FONT = font_override
-    print [FONT, OVERRIDE_FONT]
-    FONTS = [ImageFont.truetype("./fonts/"+FONT, x+8) for x in range(32)]
-    FONTS_WH = list()
-    fill_fonts_wh()
+        CJK_RE = re.compile("[" + "".join(CJK_RANGES) + "]")
+    return CJK_RE
 
 
-def fill_fonts_wh():
-    global FONTS_WH
-    test = Image.new('RGBA', (100, 100))
-    test = test.convert("RGBA")
-    draw = ImageDraw.Draw(test)
-
-    largest_char_w_size = 0
-    avg_w = 0
-    largest_char_h_size = 0
-    avg_h = 0
-
-    for i in range(len(FONTS)):
-        t = 0
-        avg_w = 0
-        avg_h = 0
-        for char in u"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz?!.,;'\"\u624b":
-            t+=1
-            size_x, size_y = draw.textsize(char, font=FONTS[i])
-            avg_w += size_x
-            avg_h += size_y
-
-            if size_x > largest_char_w_size:
-                largest_char_w_size = size_x 
-            if size_y > largest_char_h_size:
-                largest_char_h_size = size_y 
-        avg_w = int(avg_w/t)
-        avg_h = int(avg_h/t)
-
-        FONTS_WH.append([avg_w, largest_char_h_size])
-
-    draw = ImageDraw.Draw(test)
+def contains_cjk(text: str) -> bool:
+    return bool(_cjk_re().search(text))
 
 
+# ---------------------------------------------------------------------------
+# Frame encode / decode
+# ---------------------------------------------------------------------------
 
-def wrap_text(text, font, draw, w):
-    if FONT_SPLIT:
-        words = text.split(FONT_SPLIT)
+
+def _data_url_prefix(data: str) -> Optional[str]:
+    """Return the format of a ``data:image/...;base64,`` prefix, or None."""
+    for fmt in ("png", "jpeg", "jpg", "bmp", "webp"):
+        if data.startswith(f"data:image/{fmt};base64,"):
+            return "png" if fmt == "jpg" else fmt
+    return None
+
+
+def load_frame(image_data: str) -> Image.Image:
+    """Decode a base64 image string (optionally a data URL) into a PIL image."""
+    fmt = _data_url_prefix(image_data)
+    if fmt is not None:
+        payload = image_data.split(",", 1)[1]
     else:
-        words = [x for x in text]
-    outline = ""
-    outtext = ""
-    for word in words:
-        size = draw.textsize(outline+" "+word, font=font)
-        if size[0] < w:
-            outline+=FONT_SPLIT+word
+        payload = image_data
+    raw = base64.b64decode(payload)
+    img = Image.open(io.BytesIO(raw))
+    img.load()
+    return img.convert("RGB")
+
+
+def encode_frame(image: Image.Image, fmt: str = "bmp", alpha: bool = False) -> str:
+    """Encode a PIL image to base64. ``bmp`` yields 24-bit BGR (RetroArch native)."""
+    out = image
+    if fmt == "bmp":
+        out = image.convert("RGB")
+        ext = "bmp"
+    elif fmt in ("png", "png-a"):
+        if alpha:
+            out = image.convert("RGBA")
         else:
-            outtext+=outline+"\n"
-            outline = word
-    outtext+=FONT_SPLIT+outline
-    return outtext.strip()
+            out = image.convert("RGB")
+        ext = "png"
+    else:
+        raise ValueError(f"unsupported output format: {fmt}")
+    buf = io.BytesIO()
+    out.save(buf, format=ext.upper())
+    return base64.b64encode(buf.getvalue()).decode("ascii")
 
-def get_approximate_font(text, w, h):
-    best = 0
-    for i in range(32):
-        curr_x = 0
-        curr_y = FONTS_WH[i][1]
-        if FONT_SPLIT:
-            splitted = text.split(FONT_SPLIT)
+
+# ---------------------------------------------------------------------------
+# Preprocessing
+# ---------------------------------------------------------------------------
+
+
+def upscale_nearest(image: Image.Image, factor: int) -> Image.Image:
+    """Integer nearest-neighbor upscale (retro-friendly, no blur)."""
+    if factor <= 1:
+        return image
+    w, h = image.size
+    return image.resize((w * factor, h * factor), Image.NEAREST)
+
+
+def isolate_text_color(image: Image.Image) -> Image.Image:
+    """High-contrast grayscale preprocessing to isolate text for OCR.
+
+    Optional (off by default); helps some OCR engines on noisy frames.
+    """
+    gray = image.convert("L")
+    # Two-level threshold at 40% brightness; invert so text is dark-on-light
+    # is engine-dependent, so keep text dark-on-white like tesseract prefers.
+    threshold = 102
+    gray = gray.point(lambda p: 255 if p > threshold else 0)
+    return gray.convert("RGB")
+
+
+# ---------------------------------------------------------------------------
+# Overlay rendering
+# ---------------------------------------------------------------------------
+
+
+class OverlayRenderer:
+    """Renders translated text fitted into detected boxes at native resolution."""
+
+    def __init__(
+        self,
+        fonts_dir: os.PathLike = FONTS_DIR,
+        fill_background: bool = True,
+        text_color: tuple[int, int, int] = (255, 255, 255),
+        stroke_color: tuple[int, int, int] = (0, 0, 0),
+        background_color: tuple[int, int, int] = (0, 0, 0),
+        padding: int = 2,
+    ) -> None:
+        self.fonts_dir = Path(fonts_dir)
+        self.fill_background = fill_background
+        self.text_color = text_color
+        self.stroke_color = stroke_color
+        self.background_color = background_color
+        self.padding = padding
+        self._font_cache: dict[tuple[str, int], ImageFont.FreeTypeFont] = {}
+
+    def _font(self, size: int, bold: bool = False, cjk: bool = False) -> ImageFont.FreeTypeFont:
+        key = (str(size), bold, cjk)
+        cached = self._font_cache.get(key)
+        if cached is not None:
+            return cached
+        if cjk:
+            name = _CJK_BOLD_FONT if bold else _CJK_FONT
         else:
-            splitted = [x for x in text]
-        for word in splitted:
-            curr_x+=len(word)*FONTS_WH[i][0]
-            if curr_x > w:
-                curr_x = len(word)*FONTS_WH[i][0]
-                curr_y+=FONTS_WH[i][1]
-        if curr_y > h:
-            break    
-        best = i
-    return best
+            name = _LATIN_BOLD_FONT if bold else _LATIN_FONT
+        path = self.fonts_dir / name
+        font = ImageFont.truetype(str(path), size)
+        self._font_cache[key] = font
+        return font
 
-def get_text_wh(text, font, draw, mw):
-    height = font.getsize("A")[1]
-    h = len(text.strip().split("\n"))*(height+1)
-    w = 0
-    for line in text.strip().split("\n"):
-        cw = draw.textsize(line, font=font)
-        if cw > w and cw <= mw:
-            w = cw
-    return w,h
-    
-def drawTextBox(draw, text, x,y, w, h, font=None, font_size=None, font_color=None, 
-                confid=1, exact_font=None):
-    text = text.strip()
-    if h < 18:
-        h = 18
-    c = int(confid*255)
-    draw.rectangle([x-2,y, x+w+2, y+h], fill=(0,0,0,255), outline=(255,c,c,c))
-    approx_font = get_approximate_font(text, w, h)
-    succ = wrap_text(text, FONTS[8], draw, w)
-    succ_f = FONTS[8]
-    for i in range(32):
-        if exact_font is not None:
-            i = exact_font
+    def _fit_font(
+        self,
+        draw: ImageDraw.ImageDraw,
+        text: str,
+        box_w: int,
+        box_h: int,
+        cjk: bool,
+    ) -> ImageFont.FreeTypeFont:
+        inner_w = max(1, box_w - 2 * self.padding)
+        inner_h = max(1, box_h - 2 * self.padding)
+        for size in reversed(_FONT_SIZES):
+            font = self._font(size, cjk=cjk)
+            lines = self._wrap(draw, text, font, inner_w)
+            line_h = font.getbbox("Ag")[3] - font.getbbox("Ag")[1]
+            total_h = line_h * len(lines)
+            if total_h <= inner_h:
+                return font
+        return self._font(_FONT_SIZES[0], cjk=cjk)
 
-        if i < approx_font and exact_font:
-            continue
-        outtext = wrap_text(text, FONTS[i], draw, w)
-        tw, th = get_text_wh(outtext, FONTS[i], draw, w)
-
-        if th <= h and tw < max(16, 2*w) and exact_font is None:
-            #the tw requirement is less strict for cases of vertical text.
-            succ = outtext
-            succ_f = FONTS[i]
-        else:
-            break
-    outtext = succ
-    font_color_byte = (255,255,255,255)
-    if font_color:
-        font_color_byte = color_hex_to_byte(font_color)
-    if font_size:
-        succ_f = FONTS[font_size]
-    
-    draw.multiline_text((x,y), outtext, font_color_byte, font=succ_f, spacing=1)
-    return draw
-
-DEFAULT_FONT = "RobotoCondensed-Bold.ttf"
-CJK_FONT = "NotoSansCJKtc-Black.ttf"
-
-def try_switch_font(target_lang):
-    if OVERRIDE_FONT is False:
-        if target_lang.lower() in ['zh', 'zh-cn', 'zh-tw', 'ko', 'ja']:
-            if FONT != CJK_FONT:
-                load_font(CJK_FONT, "")
-        else:
-            if FONT != DEFAULT_FONT:
-                load_font(DEFAULT_FONT, " ")
-
-class ImageModder:
-    @classmethod
-    def write(cls, image_object, ocr_data, target_lang="en"):
-
-        t_time = time.time()
-        img = image_object.convert("RGBA")
-        draw = ImageDraw.Draw(img)
-        #font_name = "RobotoCondensed-Bold.ttf"
-
-        try_switch_font(target_lang)
-        font_name = FONT
-        if "ocr_results" in ocr_data:
-            ocr_data = ocr_data['ocr_results']
-        
-        for block in ocr_data['blocks']:
-            for key in block['bounding_box']:
-                if not type(block['bounding_box'][key]) == int:
-                    block['bounding_box'][key] = int(block['bounding_box'][key])
-            draw = drawTextBox(draw, block['translation'][target_lang.lower()], 
-                              block['bounding_box']['x']+2,
-                              block['bounding_box']['y'],
-                              block['bounding_box']['w']-2,
-                              block['bounding_box']['h'],
-                              font_name)
-        return img
-
-
-IMAGES_DIRECTORY = "screenshots"
-
-if os.name == "nt":
-    dir_sep = "\\"
-else:
-    dir_sep = "/"
-
-
-class ImageSaver:
-    @classmethod
-    def save_image(cls, image_object, image_source=None):
-        try:
-            os.mkdir(IMAGES_DIRECTORY)
-        except:
-            pass
-
-        if image_source is not None:
-            new_loc = image_source.split(".")
-            new_loc[-2] = new_loc[-2]+"_t"
-            new_loc = ".".join(new_loc)
-        else:
-            dt = datetime.datetime.now()
-            extension = ".png"
-            create_parts = [dt.year, dt.month, dt.day,
-                            dt.hour, dt.minute, dt.second,
-                            0, extension]
-            dir_set = set(os.listdir(IMAGES_DIRECTORY))
-            while cls.list_to_filename(create_parts) in dir_set:
-                create_parts[-2]+=1
-            create_filename = cls.list_to_filename(create_parts)
-            new_loc = os.path.join(IMAGES_DIRECTORY, create_filename)
-        image_object.save(new_loc)
-        return new_loc
-
-    @classmethod
-    def list_to_filename(cls, list_obj):
-        rval = [str(x) for x in list_obj]
-        return "-".join(rval[0:6])+rval[6]+rval[7]
-
-    @classmethod
-    def copy(cls, org, new):
-        new_file = open(new, "w")
-        old_data = open(org).read()
-        new_file.write(old_data)
-
-
-
-class ImageItterator:
-    @classmethod
-    def next(cls, baseline=None, image_type=None):
-        filename = cls._next_prev(baseline, image_type, pre_next="next")
-        if filename:
-            return os.path.join(IMAGES_DIRECTORY, filename)
-        return None 
-
-    @classmethod
-    def prev(cls, baseline=None, image_type=None):
-        filename = cls._next_prev(baseline, image_type, pre_next="prev")   
-        if filename:
-            return os.path.join(IMAGES_DIRECTORY, filename)
-        return None
-
-    @classmethod
-    def date_order_convert(cls, date):
-        orders = list()
-        data = date.split("-")
-        try:
-            orders.append(int(data[0]))#year
-            orders.append(int(data[1]))#month
-            orders.append(int(data[2]))#day
-            orders.append(int(data[3]))#hour
-            orders.append(int(data[4]))#minute
-            if "_" in data[5]:
-                orders.append(int(data[5].partition("_")[0]))#seconds
-                orders.append("_t.png")
+    @staticmethod
+    def _wrap(
+        draw: ImageDraw.ImageDraw,
+        text: str,
+        font: ImageFont.FreeTypeFont,
+        max_w: int,
+    ) -> list[str]:
+        words = text.split()
+        lines: list[str] = []
+        current = ""
+        for word in words:
+            candidate = word if not current else f"{current} {word}"
+            if draw.textlength(candidate, font=font) <= max_w:
+                current = candidate
             else:
-                orders.append(int(data[5].partition(".")[0]))#seconds
-                orders.append(".png")             
-        except:
-            print date, len(orders)
-            while len(orders) < 6:
-                orders.append(0)
-            if "_" in date:
-                orders.append("_t.png")
-            else:
-                orders.append(".png")
-        
-        return tuple(orders)
+                if current:
+                    lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines or [text]
 
-    @classmethod
-    def _next_prev(cls, baseline=None, image_type=None, pre_next="prev"):
-        try:
-            file_list = os.listdir(IMAGES_DIRECTORY)
-        except:
-            return None
-        if baseline and dir_sep in baseline:
-            baseline = baseline.split(dir_sep)[-1]        
+    def render(self, frame: Image.Image, blocks: list[Block]) -> Image.Image:
+        """Return a copy of ``frame`` with translations drawn over each block."""
+        out = frame.copy()
+        draw = ImageDraw.Draw(out)
+        for block in blocks:
+            box = block.box
+            if not box or not block.translation:
+                continue
+            cjk = contains_cjk(block.translation)
+            font = self._fit_font(draw, block.translation, box.w, box.h, cjk)
+            x, y = box.x, box.y
+            w, h = box.w, box.h
 
-        file_list = sorted(file_list, key=lambda x: cls.date_order_convert(x))
-        if pre_next == "prev":
-            itterator = file_list[::-1]
-        else:
-            itterator = file_list[::]
-    
-        min_date = ""
-        max_date = cls.date_order_convert("200000-12-12-12-12-12.png")
-        if pre_next == "next" and baseline != None:
-            min_date = cls.date_order_convert(baseline)
-        if pre_next == "prev" and baseline != None:
-            max_date = cls.date_order_convert(baseline)
-        #just get the latest image
-        for filename in itterator:
-            if baseline:
-                if min_date >= cls.date_order_convert(filename) or max_date <= cls.date_order_convert(filename):
-                    continue
-            if not filename.endswith(".png"):
-                continue
-            stripped = filename.replace("_t.png", "").replace(".png", "")
-            if not stripped.replace("-", "").isdigit():
-                continue
-            if filename.endswith("_t.png"):
-                if image_type != "screenshot":
-                    return filename
-                continue
-            elif image_type != "translate":
-                return filename
-        return None
-    
+            if self.fill_background:
+                draw.rectangle((x, y, x + w, y + h), fill=self.background_color)
+
+            lines = self._wrap(draw, block.translation, font, w - 2 * self.padding)
+            line_h = max(font.getbbox("Ag")[3] - font.getbbox("Ag")[1], 1)
+            total_h = line_h * len(lines)
+            y_start = y + max(self.padding, (h - total_h) // 2)
+            stroke_w = max(1, font.size // 14)
+            for i, line in enumerate(lines):
+                line_w = draw.textlength(line, font=font)
+                x_start = x + max(self.padding, (w - line_w) // 2)
+                ty = y_start + i * line_h
+                draw.text(
+                    (x_start, ty),
+                    line,
+                    font=font,
+                    fill=self.text_color,
+                    stroke_width=stroke_w,
+                    stroke_fill=self.stroke_color,
+                )
+        return out

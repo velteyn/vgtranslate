@@ -30,6 +30,22 @@ factor and glossary per game (e.g. SRW → quality; Megaman pixel fonts → mang
 
 ## Quick start
 
+**Windows** — the repo ships ready-made scripts; just double-click (or run in a
+terminal) from the project root:
+
+```bat
+install.bat   REM creates .venv, installs the engines, prints engine status
+run.bat       REM starts the server; pass any command: run.bat tray,
+              REM   run.bat serve --detect-llm, run.bat status
+```
+
+`install.bat` picks the best Python it can find (3.12/3.11/3.10 first, since the
+neural extras need Python <=3.12) and installs `vgtranslate[ocr,ocr-manga,mt-sugoi,tray]`
+or a smaller set if your Python is newer. Override with `install.bat all` or
+`install.bat ocr,tray`.
+
+**Linux / macOS** — from a shell:
+
 ```bash
 # 1. install (extras pick the engines you want)
 pip install "vgtranslate[ocr,ocr-manga,mt-sugoi,tray]"
@@ -37,6 +53,9 @@ pip install "vgtranslate[ocr,ocr-manga,mt-sugoi,tray]"
 # 2. start the server (auto-detects LM Studio on :1234 / Ollama on :11434)
 vgtranslate serve --detect-llm
 ```
+
+The Windows scripts run the same CLI under the hood; manually that is
+`.venv\Scripts\python -m vgtranslate serve --detect-llm`.
 
 In RetroArch: **Settings → AI Service**, enable it and set **AI Service URL** to
 `http://localhost:4404/`. Pause the game (default `F1`... consult your keybinds),

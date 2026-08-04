@@ -4,7 +4,10 @@ Everything is local and free: no Google/ztranslate accounts, no cloud calls.
 You only need Python 3.10+ and, for the *quality* path, a local LLM server with a
 GPU. The *fast* path runs entirely on CPU.
 
-## 0. Windows quick start
+## 0. Windows quick start (install.bat / run.bat)
+
+The repository ships two Windows scripts that wrap everything below — this is the
+recommended way to install and run on Windows.
 
 1. Install **Python 3.12** from [python.org](https://www.python.org/downloads/)
    (check "Add to PATH" and "py launcher" during install). Python 3.13/3.14 also
@@ -22,14 +25,19 @@ GPU. The *fast* path runs entirely on CPU.
    ```bat
    run.bat
    ```
-   (`run.bat tray` for the tray icon, `run.bat serve --detect-llm` to probe a
-   local LM Studio). Then continue at [Configure RetroArch](#4-configure-retroarch).
+   `run.bat` forwards any vgtranslate subcommand and its arguments, e.g.
+   `run.bat tray` (tray icon), `run.bat serve --detect-llm` (probe a local
+   LM Studio), `run.bat status`, or `run.bat bench ...`. Then continue at
+   [Configure RetroArch](#4-configure-retroarch).
 
 ## 1. Install
 
 ```bash
 pip install "vgtranslate[ocr,ocr-manga,mt-sugoi,tray]"
 ```
+
+On Windows, `install.bat` (section 0) wraps these exact pip commands into a
+virtual environment, so you don't need to run them by hand.
 
 or install everything:
 
@@ -90,6 +98,13 @@ override them in the tray app (Settings) or by editing the config file.
 
 ```bash
 vgtranslate serve
+```
+
+On Windows, use `run.bat` instead (section 0) — it runs the same command from
+the project's `.venv`. On Linux/macOS the equivalent of the Windows scripts is:
+
+```bash
+.venv/bin/vgtranslate serve
 ```
 
 On startup it prints the URL to put in RetroArch:

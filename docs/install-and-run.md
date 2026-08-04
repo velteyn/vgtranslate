@@ -4,6 +4,27 @@ Everything is local and free: no Google/ztranslate accounts, no cloud calls.
 You only need Python 3.10+ and, for the *quality* path, a local LLM server with a
 GPU. The *fast* path runs entirely on CPU.
 
+## 0. Windows quick start
+
+1. Install **Python 3.12** from [python.org](https://www.python.org/downloads/)
+   (check "Add to PATH" and "py launcher" during install). Python 3.13/3.14 also
+   work but cannot install the neural fast-path extras (sugoi, manga-ocr) — those
+   require Python <=3.12.
+2. Open a terminal in the cloned project folder and run:
+   ```bat
+   install.bat
+   ```
+   It creates `.venv`, picks the best Python it can find (3.12/3.11/3.10 first,
+   then any newer), and installs `vgtranslate[ocr,ocr-manga,mt-sugoi,tray]` when
+   the Python supports it, or `vgtranslate[ocr,tray]` otherwise. Override with
+   `install.bat all` or `install.bat ocr,tray`.
+3. Start the server:
+   ```bat
+   run.bat
+   ```
+   (`run.bat tray` for the tray icon, `run.bat serve --detect-llm` to probe a
+   local LM Studio). Then continue at [Configure RetroArch](#4-configure-retroarch).
+
 ## 1. Install
 
 ```bash

@@ -1,4 +1,9 @@
-"""RapidOCR provider — default fast OCR engine (ONNX, CPU-only)."""
+"""RapidOCR provider — default fast OCR engine (ONNX, CPU-only).
+
+Supports both the modern ``rapidocr>=3.0`` package (returns a
+``RapidOCROutput`` object) and the legacy ``rapidocr-onnxruntime<1.4``
+package (returns ``(result, elapse)``).
+"""
 
 from __future__ import annotations
 
@@ -7,13 +12,34 @@ from PIL import Image
 from ..blocks import Block, Box
 from .base import OCRProvider
 
-try:
+_RAPID_INSTALLED = False
+_RAPID_V2 = False
+try:  # pragma: no cover - import failure means unavailable
     import numpy as np
-    from rapidocr_onnxruntime import RapidOCR
+    from rapidocr import RapidOCR
 
     _RAPID_INSTALLED = True
+    _RAPID_V2 = True
 except Exception:  # pragma: no cover - import failure means unavailable
-    _RAPID_INSTALLED = False
+    try:
+        import numpy as np
+        from rapidocr_onnxruntime import RapidOCR
+
+        _RAPID_INSTALLED = True
+    except Exception:
+        pass
+
+_LANG_MAP = {
+    "ja": "japan",
+    "jp": "japan",
+    "ko": "korean",
+    "zh": "ch",
+    "zh-hans": "ch",
+    "zh-cn": "ch",
+    "zh-hant": "ch",
+    "zh-tw": "ch",
+    "en": "en",
+}
 
 
 class RapidOCRProvider(OCRProvider):
@@ -34,7 +60,14 @@ class RapidOCRProvider(OCRProvider):
                 "RapidOCR is not installed; run `pip install vgtranslate[ocr]`"
             )
         if self._engine is None:
-            self._engine = RapidOCR()
+            if _RAPID_V2:
+                lang = _LANG_MAP.get(self.source_lang.lower())
+                if lang:
+                    self._engine = RapidOCR(params={"Rec.lang_type": lang})
+                else:
+                    self._engine = RapidOCR()
+            else:
+                self._engine = RapidOCR()
         return self._engine
 
     def detect(self, image: Image.Image) -> list[Box]:
@@ -78,9 +111,19 @@ class RapidOCRProvider(OCRProvider):
         return blocks
 
     def _ocr_result(self, image: Image.Image, engine=None):
-        import numpy as np
-
+        """Normalize the engine output to a list of (points, text, score)."""
         engine = engine or self._get_engine()
         array = np.array(image)
+        if _RAPID_V2:
+            out = engine(array)
+            if out is None or out.txts is None:
+                return []
+            boxes = list(out.boxes) if out.boxes is not None else []
+            txts = list(out.txts)
+            scores = list(out.scores) if out.scores is not None else []
+            return [
+                (points, text, score)
+                for points, text, score in zip(boxes, txts, scores)
+            ]
         result, _elapse = engine(array)
         return result or []

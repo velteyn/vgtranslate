@@ -20,6 +20,14 @@ from .benchmark.cli import main as bench_main
 log = logging.getLogger("vgtranslate")
 
 
+def _make_console_unicode_safe() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except Exception:
+            pass
+
+
 def _setup_logging(verbose: bool) -> None:
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -125,6 +133,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _make_console_unicode_safe()
     if argv is None:
         argv = sys.argv[1:]
     if argv and argv[0] == "bench":

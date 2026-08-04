@@ -27,11 +27,18 @@ if exist "%VENV_PY%" (
 )
 
 :venv_ok
-for /f "usebackq tokens=1,2" %%a in (`"%VENV_PY%" -c "import sys;print(sys.version_info[0],sys.version_info[1])"`) do set "PY_MAJOR=%%a" & set "PY_MINOR=%%b"
+set "VERFILE=%TEMP%\vgtranslate_pyver.txt"
+"%VENV_PY%" -c "import sys;print(sys.version_info[0],sys.version_info[1])" > "%VERFILE%" 2>nul
+for /f "usebackq tokens=1,2" %%a in ("%VERFILE%") do set "PY_MAJOR=%%a" & set "PY_MINOR=%%b"
+del "%VERFILE%" 2>nul
+if not defined PY_MAJOR (
+    echo ERROR: "%VENV_PY%" is not working. Delete the .venv folder and re-run install.bat.
+    goto :fail
+)
 echo Python in .venv: %PY_MAJOR%.%PY_MINOR%
 
 set "EXTRAS=%LITE_EXTRAS%"
-if "%PY_MAJOR%"=="3" if "%PY_MINOR%" LEQ 12 set "EXTRAS=%FULL_EXTRAS%"
+if "%PY_MAJOR%"=="3" if %PY_MINOR% LEQ 12 set "EXTRAS=%FULL_EXTRAS%"
 
 if not "%~1"=="" set "EXTRAS=%~1"
 if "%EXTRAS%"=="all" set "EXTRAS=%FULL_EXTRAS%"
@@ -39,12 +46,23 @@ if "%EXTRAS%"=="all" set "EXTRAS=%FULL_EXTRAS%"
 echo Installing extras: [%EXTRAS%]
 echo.
 if not "%EXTRAS%"=="%FULL_EXTRAS%" (
-    echo NOTE: mt-sugoi (neural JP-EN) and manga-ocr require Python 3.12 or older.
+    echo NOTE: mt-sugoi neural JP-EN and manga-ocr require Python 3.12 or older.
     echo To install the full set: install Python 3.12 from python.org, delete the
     echo .venv folder, and run install.bat all
     echo.
 )
 
+"%VENV_PY%" -m pip --version >nul 2>&1 || goto :repair_pip
+goto :pip_ok
+
+:repair_pip
+echo.
+echo The .venv has a broken pip installation; repairing it...
+"%VENV_PY%" -c "import sys,os,glob,shutil;sp=os.path.join(sys.prefix,'Lib','site-packages');[shutil.rmtree(p,ignore_errors=True) for p in glob.glob(os.path.join(sp,'pip'))+glob.glob(os.path.join(sp,'pip-*.dist-info'))]"
+"%VENV_PY%" -m ensurepip --upgrade || goto :fail
+"%VENV_PY%" -m pip --version >nul 2>&1 || goto :fail
+
+:pip_ok
 "%VENV_PY%" -m pip install --upgrade pip || goto :fail
 "%VENV_PY%" -m pip install -e ".[%EXTRAS%]" || goto :fail
 

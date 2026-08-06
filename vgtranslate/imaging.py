@@ -14,7 +14,7 @@ from typing import Optional
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .blocks import Block
+from .blocks import Block, Box
 
 FONTS_DIR = Path(__file__).parent / "fonts"
 
@@ -134,7 +134,8 @@ class OverlayRenderer:
         text_color: tuple[int, int, int] = (255, 255, 255),
         stroke_color: tuple[int, int, int] = (0, 0, 0),
         background_color: tuple[int, int, int] = (0, 0, 0),
-        padding: int = 2,
+        padding: int = 1,
+        font_scale: float = 1.0,
     ) -> None:
         self.fonts_dir = Path(fonts_dir)
         self.fill_background = fill_background
@@ -142,6 +143,7 @@ class OverlayRenderer:
         self.stroke_color = stroke_color
         self.background_color = background_color
         self.padding = padding
+        self.font_scale = font_scale
         self._font_cache: dict[tuple[str, int], ImageFont.FreeTypeFont] = {}
 
     def _font(self, size: int, bold: bool = False, cjk: bool = False) -> ImageFont.FreeTypeFont:
@@ -207,23 +209,43 @@ class OverlayRenderer:
             box = block.box
             if not box or not block.translation:
                 continue
+            if self.font_scale != 1.0:
+                cx = box.x + box.w / 2
+                cy = box.y + box.h / 2
+                box = Box(
+                    x=int(round(cx - box.w * self.font_scale / 2)),
+                    y=int(round(cy - box.h * self.font_scale / 2)),
+                    w=int(round(box.w * self.font_scale)),
+                    h=int(round(box.h * self.font_scale)),
+                ).clamped(frame.size[0], frame.size[1])
             cjk = contains_cjk(block.translation)
             font = self._fit_font(draw, block.translation, box.w, box.h, cjk)
             x, y = box.x, box.y
             w, h = box.w, box.h
 
-            if self.fill_background:
-                draw.rectangle((x, y, x + w, y + h), fill=self.background_color)
-
             lines = self._wrap(draw, block.translation, font, w - 2 * self.padding)
-            line_h = max(font.getbbox("Ag")[3] - font.getbbox("Ag")[1], 1)
-            total_h = line_h * len(lines)
-            y_start = y + max(self.padding, (h - total_h) // 2)
-            stroke_w = max(1, font.size // 14)
-            for i, line in enumerate(lines):
-                line_w = draw.textlength(line, font=font)
+            metrics = [font.getbbox(line) for line in lines]
+            pitch = font.getbbox("Ag")[3] - font.getbbox("Ag")[1]
+            max_ink = max((m[3] - m[1] for m in metrics), default=pitch)
+            y_start = y + self.padding
+            positions = []
+            for i, (line, m) in enumerate(zip(lines, metrics)):
+                line_w = m[2] - m[0]
                 x_start = x + max(self.padding, (w - line_w) // 2)
-                ty = y_start + i * line_h
+                positions.append((x_start, y_start + i * pitch, line, line_w))
+
+            if self.fill_background:
+                fill_x1 = min(p[0] for p in positions) - self.padding
+                fill_x2 = max(p[0] + p[3] for p in positions) + self.padding
+                fill_y1 = y_start - self.padding
+                fill_y2 = y_start + (len(lines) - 1) * pitch + max_ink + self.padding
+                draw.rectangle(
+                    (fill_x1, fill_y1, fill_x2, fill_y2),
+                    fill=self.background_color,
+                )
+
+            stroke_w = max(1, font.size // 14)
+            for x_start, ty, line, _line_w in positions:
                 draw.text(
                     (x_start, ty),
                     line,
@@ -231,5 +253,6 @@ class OverlayRenderer:
                     fill=self.text_color,
                     stroke_width=stroke_w,
                     stroke_fill=self.stroke_color,
+                    anchor="lt",
                 )
         return out

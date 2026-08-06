@@ -114,21 +114,31 @@ class OpenAICompatTranslator(TranslateProvider):
             )
         payload: dict = {
             "model": self.model,
-            "messages": messages,
+            "messages": list(messages),
             "temperature": self.settings.temperature,
             "stream": False,
         }
+        if self.settings.skip_reasoning and payload["messages"]:
+            # Reasoning models (e.g. Qwen3.x) burn their whole budget on
+            # chain-of-thought before answering, which times out on slow local
+            # inference. A trailing empty assistant turn skips the thinking phase.
+            payload["messages"].append({"role": "assistant", "content": " \n"})
+            payload["continue_assistant_turn"] = True
         if self.settings.json_mode:
             payload["response_format"] = {"type": "json_object"}
+        resp = None
         try:
             resp = self._http().post("/chat/completions", json=payload)
             resp.raise_for_status()
         except Exception as exc:
-            if self.settings.json_mode and resp.status_code in (400, 422):
+            if resp is not None and self.settings.json_mode and resp.status_code in (400, 422):
                 # Some local servers reject response_format; retry without it.
                 payload.pop("response_format", None)
-                resp = self._http().post("/chat/completions", json=payload)
-                resp.raise_for_status()
+                try:
+                    resp = self._http().post("/chat/completions", json=payload)
+                    resp.raise_for_status()
+                except Exception as retry_exc:
+                    raise RuntimeError(f"LLM request failed: {retry_exc}") from retry_exc
             else:
                 raise RuntimeError(f"LLM request failed: {exc}") from exc
         data = resp.json()
@@ -139,8 +149,38 @@ class OpenAICompatTranslator(TranslateProvider):
         return _extract_content(message)
 
     @staticmethod
+    def _find_json_end(text: str, start: int) -> int:
+        """Index just past the balanced JSON value starting at ``start``."""
+        depth = 0
+        in_str = False
+        escaped = False
+        for i in range(start, len(text)):
+            ch = text[i]
+            if in_str:
+                if escaped:
+                    escaped = False
+                elif ch == "\\":
+                    escaped = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch in "[{":
+                depth += 1
+            elif ch in "]}":
+                depth -= 1
+                if depth == 0:
+                    return i + 1
+        return len(text)
+
+    @staticmethod
     def _parse_json(text: str) -> list:
-        """Extract a JSON array (or object) from a model response."""
+        """Extract a JSON array (or object) from a model response.
+
+        Models frequently append trailing prose or an ellipsis after the JSON;
+        only the balanced JSON value is parsed so those are tolerated.
+        """
         stripped = text.strip()
         if not stripped:
             raise ValueError("empty LLM response")
@@ -155,7 +195,29 @@ class OpenAICompatTranslator(TranslateProvider):
                 start = idx
         if start == len(stripped):
             raise ValueError(f"no JSON found in LLM response: {text[:200]!r}")
-        data = json.loads(stripped[start:])
+        end = OpenAICompatTranslator._find_json_end(stripped, start)
+        try:
+            data = json.loads(stripped[start:end])
+        except (ValueError, json.JSONDecodeError):
+            # Best-effort salvage: the model occasionally drops a malformed item
+            # or stray text mid-array. Extract every well-formed JSON object.
+            items: list = []
+            pos = start
+            while True:
+                idx = stripped.find("{", pos)
+                if idx == -1 or idx >= end:
+                    break
+                obj_end = OpenAICompatTranslator._find_json_end(stripped, idx)
+                try:
+                    obj = json.loads(stripped[idx:obj_end])
+                except (ValueError, json.JSONDecodeError):
+                    obj = None
+                if isinstance(obj, dict):
+                    items.append(obj)
+                pos = idx + 1
+            if not items:
+                raise ValueError(f"no JSON found in LLM response: {text[:200]!r}")
+            return items
         return data if isinstance(data, list) else [data]
 
     # -- text translation ----------------------------------------------------
@@ -227,9 +289,13 @@ class OpenAICompatTranslator(TranslateProvider):
             "(top-to-bottom, left-to-right). Do not skip menu items, status text or "
             "dialogue.\n"
             'Reply ONLY with a JSON array, no markdown, in this exact shape:\n'
-            '[{"text": "original text", "box": [x, y, w, h], '
-            f'"translation": "translated text"}}] '
-            f"where box coordinates are pixel positions in the {width}x{height} image.\n"
+            '[{"text": "original text", "box": [x1, y1, x2, y2], '
+            '"translation": "translated text"}] '
+            f"where box is [top-left x, top-left y, bottom-right x, bottom-right y] "
+            f"as integer pixel positions in the {width}x{height} image.\n"
+            'Example: [{"text": "ダメ", "box": [10, 10, 100, 30], "translation": "No good"}]\n'
+            "Use exactly the keys text, box, translation. "
+            "Make each box tightly enclose a single text line (its true height), never merge lines.\n"
             f"Translate all text from {source_lang} to {target_lang}."
         )
         if glossary:
@@ -265,21 +331,30 @@ class OpenAICompatTranslator(TranslateProvider):
         for index, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
-            box = item.get("box")
+            box = item.get("box") or item.get("box_2d")
             if isinstance(box, dict):
-                box = Box(
-                    x=int(box.get("x", 0)),
-                    y=int(box.get("y", 0)),
-                    w=int(box.get("w", 0)),
-                    h=int(box.get("h", 0)),
-                )
+                if "x1" in box or "x2" in box:
+                    box = Box.from_xyxy(
+                        int(box.get("x1", 0)),
+                        int(box.get("y1", 0)),
+                        int(box.get("x2", 0)),
+                        int(box.get("y2", 0)),
+                    )
+                else:
+                    box = Box(
+                        x=int(box.get("x", 0)),
+                        y=int(box.get("y", 0)),
+                        w=int(box.get("w", 0)),
+                        h=int(box.get("h", 0)),
+                    )
             elif isinstance(box, (list, tuple)) and len(box) == 4:
-                box = Box(int(box[0]), int(box[1]), int(box[2]), int(box[3]))
+                x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
+                box = Box.from_xyxy(min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
             else:
                 box = Box()
             if not box:
                 continue
-            text = str(item.get("text", "") or "").strip()
+            text = str(item.get("text") or item.get("text_content") or "").strip()
             translation = str(item.get("translation", "") or "").strip()
             if not text and not translation:
                 continue

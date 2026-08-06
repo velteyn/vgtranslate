@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ocr = ["rapidocr>=3.0"]
+ocr = ["rapidocr>=3.0", "onnxruntime>=1.17"]
 ocr-manga = ["manga-ocr>=0.1"]
 mt-sugoi = ["sugoi[ja_zh2en]>=0.6"]
 mt-argos = ["argostranslate>=1.9"]
@@ -35,6 +35,7 @@ tray = ["pystray>=0.19"]
 dev = ["pytest>=8", "ruff>=0.4"]
 all = [
     "rapidocr>=3.0",
+    "onnxruntime>=1.17",
     "manga-ocr>=0.1",
     "sugoi[ja_zh2en]>=0.6",
     "argostranslate>=1.9",

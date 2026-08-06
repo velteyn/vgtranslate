@@ -22,9 +22,10 @@ same file.
   "llm": {
     "base_url": "http://localhost:1234/v1",
     "model": "qwen2.5-vl-7b-instruct",
-    "timeout": 90,
+    "timeout": 300,
     "temperature": 0.1,
-    "json_mode": true
+    "json_mode": true,
+    "skip_reasoning": false
   },
   "active_profile": "default",
   "profiles": {
@@ -62,9 +63,10 @@ same file.
 |---|---|
 | `base_url` | OpenAI-compatible endpoint root, e.g. `http://localhost:1234/v1`. Set by `vgtranslate serve --detect-llm` or `vgtranslate detect`. |
 | `model` | Model id to use for the quality path. |
-| `timeout` | Seconds to wait for a completion (default 90). |
+| `timeout` | Seconds to wait for a completion (default 300). |
 | `temperature` | Sampling temperature; keep low for translation (default 0.1). |
 | `json_mode` | Request `response_format: {type: json_object}`; some servers reject it and vgtranslate retries without it automatically. |
+| `skip_reasoning` | When `true`, skips the reasoning/chain-of-thought phase on thinking models (Qwen3.x) with an empty assistant-prefill turn; cuts latency and prevents timeouts on slow local inference. |
 
 ## Profiles
 
@@ -73,7 +75,7 @@ the profile you want served (or switch from the tray app).
 
 | Key | Values | Default | Meaning |
 |---|---|---|---|
-| `mode` | `quality` / `fast` | `quality` | `quality` = vision LLM reads+translates the whole frame; `fast` = OCR then text MT. |
+| `mode` | `quality` / `fast` | `quality` | `quality` = vision LLM reads+translates the whole frame, with each translation anchored to a RapidOCR line box; `fast` = OCR then text MT. |
 | `ocr` | `rapid` / `manga` / `tesseract` | `rapid` | OCR engine for the fast path. |
 | `translator` | `openai` / `sugoi` / `argos` | `openai` | MT engine. `openai` is frame-capable (used by `quality`). |
 | `upscale` | integer ≥ 1 | `2` | Nearest-neighbor upscale applied before OCR/VLM; boxes are mapped back to native resolution. |

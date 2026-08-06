@@ -34,7 +34,7 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def cmd_serve(args) -> None:
-    from .config import load_config, merge_llm_detected
+    from .config import detect_llm, load_config, merge_llm_detected
     from .server import Server
 
     config = load_config(args.config) if args.config else load_config()

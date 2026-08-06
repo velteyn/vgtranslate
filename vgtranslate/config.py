@@ -53,9 +53,10 @@ def config_path() -> Path:
 class LLMSettings:
     base_url: str = ""
     model: str = ""
-    timeout: float = 90.0
+    timeout: float = 300.0
     temperature: float = 0.1
     json_mode: bool = True
+    skip_reasoning: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -64,6 +65,7 @@ class LLMSettings:
             "timeout": self.timeout,
             "temperature": self.temperature,
             "json_mode": self.json_mode,
+            "skip_reasoning": self.skip_reasoning,
         }
 
     @classmethod
@@ -71,9 +73,10 @@ class LLMSettings:
         return cls(
             base_url=str(data.get("base_url", "")),
             model=str(data.get("model", "")),
-            timeout=float(data.get("timeout", 90.0)),
+            timeout=float(data.get("timeout", 300.0)),
             temperature=float(data.get("temperature", 0.1)),
             json_mode=bool(data.get("json_mode", True)),
+            skip_reasoning=bool(data.get("skip_reasoning", False)),
         )
 
 

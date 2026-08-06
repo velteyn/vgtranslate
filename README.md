@@ -12,7 +12,8 @@ current frame, and vgtranslate returns a translated overlay at native resolution
 RetroArch (paused frame)
    │ POST /  image=<base64>&target_lang=en&output=image
    ▼
-vgtranslate ── quality: vision LLM reads + translates the whole frame (one shot)
+vgtranslate ── quality: vision LLM reads + translates the whole frame; RapidOCR
+            │          anchors each translation to the exact text line (one shot)
             │  fast:     OCR detect/recognize → text MT per region
             ▼
    { image: <overlay BMP>, image_width, image_height, image_format, ... }
@@ -22,11 +23,29 @@ vgtranslate ── quality: vision LLM reads + translates the whole frame (one s
 
 | Path | Pipeline | When to use |
 |---|---|---|
-| **quality** (default) | A local vision LLM (LM Studio / Ollama) reads every text region and translates it in one shot; it supplies the text boxes | Most games; best accuracy, needs a GPU |
+| **quality** (default) | A local vision LLM (LM Studio / Ollama) reads every text region and translates it in one shot; RapidOCR anchors each translation to the exact text line | Most games; best accuracy, needs a GPU |
 | **fast** | RapidOCR (CPU) detects/recognizes, then Sugoi (JP→EN) or Argos Translate translates per region | Older machines, or when you want no LLM at all |
 
 Games can be mixed: profiles let you pick a path, OCR engine, translator, upscale
 factor and glossary per game (e.g. SRW → quality; Megaman pixel fonts → manga-ocr).
+
+## Highlights
+
+- **Pixel-perfect overlays.** The vision LLM's own box coordinates are too coarse
+  for tight overlays, so on the quality path every translation is snapped to the
+  precise per-line box that RapidOCR finds in the frame. Text lands exactly on the
+  original line, at the right size, with no oversized black bands.
+- **True font-metric rendering.** Background fills hug the rendered text (1&nbsp;px
+  padding) and glyphs are centered using real ink metrics, so nothing overflows the
+  box or rides below the baseline.
+- **Reasoning-model friendly.** `skip_reasoning` tells Qwen3.x-style models to skip
+  their chain-of-thought before answering, cutting latency on slow local inference
+  and avoiding 90&nbsp;s+ timeouts; the default LLM timeout is now 300&nbsp;s.
+- **Robust to sloppy LLM output.** The vision-LLM reply is parsed tolerantly:
+  trailing prose, ellipses, dropped or malformed JSON items, and both
+  `[x1,y1,x2,y2]` corner boxes and `box`/`box_2d` keys are handled.
+- **Per-line boxes.** The quality-path prompt asks for one tight box per text line
+  (never merged regions), and `box_2d`/`text_content` variants are accepted.
 
 ## Quick start
 

@@ -1,0 +1,95 @@
+{
+  "samples": [
+    {
+      "image": "srw_title.png",
+      "game": "srw",
+      "text_type": "menu",
+      "source_text": "進化の証し!ここに!",
+      "translation": "The proof of evolution -- right here!"
+    },
+    {
+      "image": "srw_tagline.png",
+      "game": "srw",
+      "text_type": "menu",
+      "source_text": "あらゆる面がリニューアル!",
+      "translation": "Every aspect has been renewed!"
+    },
+    {
+      "image": "srw_body1.png",
+      "game": "srw",
+      "text_type": "menu",
+      "source_text": "大好評の援護行動システムや迫力のカットイン、",
+      "translation": "The hugely popular support-action system, dramatic cut-ins,"
+    },
+    {
+      "image": "srw_body2.png",
+      "game": "srw",
+      "text_type": "menu",
+      "source_text": "ボリュームアップレたストーリーなど、",
+      "translation": "an expanded story, and more --"
+    },
+    {
+      "image": "srw_body3.png",
+      "game": "srw",
+      "text_type": "menu",
+      "source_text": "スーバーロボット大戦の楽しさは、進化する!",
+      "translation": "The fun of Super Robot Wars evolves!"
+    },
+    {
+      "image": "atelier_line1.png",
+      "game": "atelier",
+      "text_type": "dialogue",
+      "source_text": "そう信じようと思います、",
+      "translation": "I think I'll believe it,"
+    },
+    {
+      "image": "atelier_line2.png",
+      "game": "atelier",
+      "text_type": "dialogue",
+      "source_text": "シルマール先生。",
+      "translation": "Teacher Silmare."
+    },
+    {
+      "image": "atelier_line3.png",
+      "game": "atelier",
+      "text_type": "dialogue",
+      "source_text": "ソフィー様のアニマは",
+      "translation": "Miss Sophie's anima is"
+    },
+    {
+      "image": "atelier_line4.png",
+      "game": "atelier",
+      "text_type": "dialogue",
+      "source_text": "いつまでも君と共にある。",
+      "translation": "with you forever."
+    },
+    {
+      "image": "bb_lineup.png",
+      "game": "baseball",
+      "text_type": "menu",
+      "source_text": "スタメン",
+      "translation": "Starting lineup"
+    },
+    {
+      "image": "bb_uniform.png",
+      "game": "baseball",
+      "text_type": "menu",
+      "source_text": "ユニフォーム",
+      "translation": "Uniform"
+    },
+    {
+      "image": "bb_time.png",
+      "game": "baseball",
+      "text_type": "status",
+      "source_text": "あと31分42秒",
+      "translation": "31:42 remaining"
+    },
+    {
+      "image": "bb_roles.png",
+      "game": "baseball",
+      "text_type": "menu",
+      "source_text": "投手 野手 二軍",
+      "translation": "Pitchers / Fielders / Minors"
+    }
+  ]
+}

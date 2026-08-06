@@ -63,13 +63,13 @@
 - [x] 10.1 Implement benchmark dataset structure (images + ground_truth.json with metadata)
 - [x] 10.2 Implement metrics (detection hit rate, CER, end-to-end usability)
 - [x] 10.3 Implement comparison report (scoreboard) + headless CLI
-- [ ] 10.4 Gather first benchmark set: real failing screenshots (Super Robot Wars dialogue/menus, Megaman) with ground truth
+- [x] 10.4 Gather first benchmark set: real failing screenshots (Super Robot Wars dialogue/menus, Megaman) with ground truth
 
 ## 11. Engine selection via benchmark
 
-- [ ] 11.1 Run benchmark comparing VLM-coords vs RapidOCR-detect paths on SRW frames
-- [ ] 11.2 Run benchmark on pixel-font (Megaman) frames for manga-ocr vs RapidOCR vs VLM
-- [ ] 11.3 Decide and set default profile(s) from measured results (document choices)
+- [x] 11.1 Run benchmark comparing VLM-coords vs RapidOCR-detect paths on SRW frames
+- [x] 11.2 Run benchmark on pixel-font (Megaman) frames for manga-ocr vs RapidOCR vs VLM
+- [x] 11.3 Decide and set default profile(s) from measured results (document choices)
 
 ## 12. Tray app
 
@@ -81,8 +81,8 @@
 ## 13. End-to-end validation
 
 - [ ] 13.1 Validate protocol against a real RetroArch instance (pause → translate → overlay aligns at native res, BGR correct)
-- [ ] 13.2 Validate LM Studio integration end-to-end (quality path on an SRW screenshot)
-- [ ] 13.3 Validate fast path (RapidOCR + Sugoi) on CPU
+- [x] 13.2 Validate LM Studio integration end-to-end (quality path on an SRW screenshot)
+- [x] 13.3 Validate fast path (RapidOCR + Sugoi) on CPU
 
 ## 14. Packaging and docs
 

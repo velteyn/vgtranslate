@@ -1,0 +1,42 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 4404,
+    "default_target": "en",
+    "auto_unpause": false
+  },
+  "llm": {
+    "base_url": "http://localhost:1234/v1",
+    "model": "qwen/qwen3.5-9b",
+    "timeout": 300,
+    "temperature": 0.1,
+    "json_mode": true,
+    "skip_reasoning": true
+  },
+  "active_profile": "bench-fast",
+  "profiles": {
+    "bench-quality": {
+      "mode": "quality",
+      "ocr": "rapid",
+      "translator": "openai",
+      "upscale": 2,
+      "color_isolation": false,
+      "source_lang": "ja",
+      "target_lang": "en",
+      "glossary": "default"
+    },
+    "bench-fast": {
+      "mode": "fast",
+      "ocr": "rapid",
+      "translator": "argos",
+      "upscale": 2,
+      "color_isolation": false,
+      "source_lang": "ja",
+      "target_lang": "en",
+      "glossary": "default"
+    }
+  },
+  "glossaries": {
+    "default": {}
+  }
+}

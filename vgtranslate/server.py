@@ -83,10 +83,10 @@ async def _collect_params(request: Request) -> dict:
             if isinstance(body, dict):
                 params.update({str(k): v for k, v in body.items()})
         elif content_type.startswith("multipart/form-data"):
-            form = await request.form()
+            form = await request.form(max_part_size=100 * 1024 * 1024)
             params.update({str(k): v for k, v in form.items()})
         elif content_type.startswith("application/x-www-form-urlencoded"):
-            form = await request.form()
+            form = await request.form(max_part_size=100 * 1024 * 1024)
             params.update({str(k): v for k, v in form.items()})
     except Exception:  # noqa: BLE001
         raw = await request.body()

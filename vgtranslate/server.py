@@ -38,6 +38,19 @@ VALID_OUTPUTS = ("image", "text", "both")
 DEFAULT_OUTPUT = "image"
 
 
+class ClientError(Exception):
+    """A request error with a safe, user-facing message.
+
+    The message is set explicitly at the raise site and never derived from the
+    exception's string form or traceback, so it can be returned to the client
+    without leaking internal details.
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
 def create_app(config: Config) -> FastAPI:
     app = FastAPI(title="vgtranslate", version="2.0.0", docs_url=None, redoc_url=None)
     app.state.config = config
@@ -64,11 +77,13 @@ def create_app(config: Config) -> FastAPI:
         params = await _collect_params(request)
         try:
             result = _handle_service(app.state, params)
-        except ValueError as exc:
-            return JSONResponse({"status": "error", "message": str(exc)}, status_code=400)
-        except Exception as exc:  # noqa: BLE001
+        except ClientError as exc:
+            return JSONResponse({"status": "error", "message": exc.message}, status_code=400)
+        except Exception:  # noqa: BLE001
             log.exception("service request failed")
-            return JSONResponse({"status": "error", "message": str(exc)}, status_code=500)
+            return JSONResponse(
+                {"status": "error", "message": "internal server error"}, status_code=500
+            )
         return JSONResponse(result)
 
     return app
@@ -121,7 +136,7 @@ def _handle_service(state, params: dict) -> dict:
 
     image_data = _as_str(params.get("image"))
     if not image_data:
-        raise ValueError("missing 'image' parameter")
+        raise ClientError("missing 'image' parameter")
 
     source_lang = _as_str(params.get("source_lang")) or config.active().source_lang
     target_lang = (
@@ -130,7 +145,7 @@ def _handle_service(state, params: dict) -> dict:
     )
     output = _as_str(params.get("output")) or DEFAULT_OUTPUT
     if output not in VALID_OUTPUTS:
-        raise ValueError(f"'output' must be one of {VALID_OUTPUTS}, got '{output}'")
+        raise ClientError(f"'output' must be one of {VALID_OUTPUTS}, got '{output}'")
 
     frame = load_frame(image_data)
     blocks = pipeline.translate_frame(frame, source_lang, target_lang)

@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest an idea for VGTranslate
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Larger changes are planned through OpenSpec changes
+        (`openspec/changes/<change-id>/`) - see CONTRIBUTING.md "Planning changes".
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What do you want to do that you currently cannot?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, configuration option, or interface you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds or other approaches you considered.
+  - type: checkboxes
+    id: openspec
+    attributes:
+      label: OpenSpec
+      options:
+        - label: I understand that larger changes go through openspec/changes/<change-id>/

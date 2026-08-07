@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/velteyn/vgtranslate/tree/master/docs
+    about: Read the user documentation first - most engine and setup questions are answered there.

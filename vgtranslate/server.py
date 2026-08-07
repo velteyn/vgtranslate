@@ -83,10 +83,10 @@ async def _collect_params(request: Request) -> dict:
             if isinstance(body, dict):
                 params.update({str(k): v for k, v in body.items()})
         elif content_type.startswith("multipart/form-data"):
-            form = await request.form(max_part_size=100 * 1024 * 1024)
+            form = await _request_form(request)
             params.update({str(k): v for k, v in form.items()})
         elif content_type.startswith("application/x-www-form-urlencoded"):
-            form = await request.form(max_part_size=100 * 1024 * 1024)
+            form = await _request_form(request)
             params.update({str(k): v for k, v in form.items()})
     except Exception:  # noqa: BLE001
         raw = await request.body()
@@ -98,6 +98,20 @@ async def _collect_params(request: Request) -> dict:
             except (ValueError, UnicodeDecodeError):
                 params["image"] = raw.decode("utf-8", errors="ignore")
     return params
+
+
+async def _request_form(request: Request):
+    """Parse a form body, tolerating a large frame part.
+
+    Starlette >=0.37.2 supports ``max_part_size``; without it, base64 frames
+    sent as urlencoded/multipart forms are truncated at the default 1 MB part
+    limit. On older Starlette versions fall back to the default limit instead
+    of crashing on the unexpected keyword.
+    """
+    try:
+        return await request.form(max_part_size=100 * 1024 * 1024)
+    except TypeError:
+        return await request.form()
 
 
 def _handle_service(state, params: dict) -> dict:

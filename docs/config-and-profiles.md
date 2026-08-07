@@ -14,7 +14,7 @@ same file.
 ```json
 {
   "server": {
-    "host": "127.0.0.1",
+    "host": "0.0.0.0",
     "port": 4404,
     "default_target": "en",
     "auto_unpause": false
@@ -53,7 +53,7 @@ same file.
 
 | Key | Meaning |
 |---|---|
-| `host` / `port` | Bind address for the RetroArch endpoint (default `127.0.0.1:4404`). |
+| `host` / `port` | Bind address for the RetroArch endpoint (default `0.0.0.0:4404`, i.e. all interfaces, so a handheld like a Retroid on the same network can connect). Set to `127.0.0.1` to restrict to this PC only. |
 | `default_target` | Language used when a request has no `target_lang` (default `en`). |
 | `auto_unpause` | When `true` and the game reports itself paused, the response includes `press: ["unpause"]` so RetroArch resumes automatically after translation. |
 

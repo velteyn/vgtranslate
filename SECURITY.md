@@ -33,12 +33,17 @@ What happens next:
 
 ## Scope
 
-VGTranslate is a **local-first** server: it binds to `localhost`, is driven by a
-trusted emulator on the same machine, and talks to local LLM services. The
+VGTranslate is a **local-first** server: by default it listens on all
+interfaces (`0.0.0.0:4404`) so a handheld (e.g. a Retroid) on the same LAN can
+reach it, and it talks to local LLM services. It is driven by a trusted
+emulator, but **any device on the local network can reach the endpoint**. The
 reports that matter most:
 
 - Requests that crash, hang, or exhaust the server (malformed frames, very
   large uploads).
 - Content-type/parser edge cases that bypass the validated request handling.
 - Path traversal or config tampering reachable from the HTTP endpoint.
-- Anything that would let a malicious page or game abuse the localhost service.
+- Anything that would let a malicious page, device, or game abuse the service.
+
+To restrict the server to this machine only, set `server.host` to `127.0.0.1`
+in the config file.

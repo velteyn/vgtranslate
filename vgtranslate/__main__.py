@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import socket
 import sys
 
 from . import __version__
@@ -33,6 +34,63 @@ def _setup_logging(verbose: bool) -> None:
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
+def _enumerate_ips() -> list[str]:
+    """All reachable non-loopback IPv4 addresses of this machine.
+
+    Uses the hostname address list plus a local UDP "connect" (no packets are
+    sent) to also capture the default-route interface, so both a LAN cable and
+    a Wi-Fi adapter show up when present.
+    """
+    ips: set[str] = set()
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if not ip.startswith("127."):
+                ips.add(ip)
+    except OSError:
+        pass
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        probe.connect(("8.8.8.8", 80))
+        ip = probe.getsockname()[0]
+        if not ip.startswith("127."):
+            ips.add(ip)
+        probe.close()
+    except OSError:
+        pass
+    return sorted(ips)
+
+
+def _print_serve_hint(config) -> None:
+    host = config.server.host
+    port = config.server.port
+    box = "=" * 60
+    if host in ("0.0.0.0", "::"):
+        ips = _enumerate_ips()
+        print(f"\n{box}")
+        print(f"  vgtranslate {__version__} serving on port {port}")
+        if ips:
+            print("  Connect RetroArch on any device (Retroid, phone, PC) with:")
+            for ip in ips:
+                print(f"    AI Service URL: http://{ip}:{port}/")
+        else:
+            print(f"  Connect RetroArch with: http://<this-machine-ip>:{port}/")
+        print(f"  (from this PC itself: http://localhost:{port}/)")
+        print("  Then in RetroArch: Settings > AI Service > enable, set the URL,")
+        print("  and bind the AI Service hotkey under Settings > Input > Hotkeys.")
+        print(f"{box}\n")
+    else:
+        print(f"\nvgtranslate {__version__} serving on http://{host}:{port}")
+        print(f"RetroArch AI Service URL: http://localhost:{port}/")
+        if host in ("127.0.0.1", "localhost"):
+            from .config import config_path
+
+            print("NOTE: this server only listens on localhost, so devices on your network")
+            print('(Retroid, phone) cannot reach it. Set server.host to "0.0.0.0" in')
+            print(f"{config_path()} and restart to allow them.")
+        print("Press Ctrl+C to stop.\n")
+
+
 def cmd_serve(args) -> None:
     from .config import detect_llm, load_config, merge_llm_detected
     from .server import Server
@@ -45,9 +103,7 @@ def cmd_serve(args) -> None:
         save_config(config)
     server = Server(config)
     server.start()
-    print(f"vgtranslate {__version__} serving on http://{config.server.host}:{config.server.port}")
-    print("RetroArch AI Service URL: http://localhost:%d/" % config.server.port)
-    print("Press Ctrl+C to stop.")
+    _print_serve_hint(config)
     try:
         while True:
             import time

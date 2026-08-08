@@ -3,9 +3,10 @@
 Implements the libretro AI Service wire protocol on localhost:4404:
 
 * ``POST /`` (or any path) — translate a paused-game screenshot. Query params
-  carry ``source_lang``, ``target_lang``, ``output``; the body (urlencoded form
-  or JSON) carries ``image`` (base64), ``format``, ``coords``, ``viewport``,
-  ``state``.
+  carry ``source_lang``, ``target_lang``, ``output`` (comma-separated formats
+  plus sub-formats, e.g. ``image,png,png-a``, ``text``, or ``sound,wav``); the
+  body (urlencoded form or JSON) carries ``image`` (base64), ``format``,
+  ``coords``, ``viewport``, ``label``, ``state``.
 * ``GET /health`` / ``GET /status`` — server state and engine availability for
   the tray app.
 
@@ -34,7 +35,9 @@ from .pipeline import Pipeline
 
 log = logging.getLogger("vgtranslate.server")
 
-VALID_OUTPUTS = ("image", "text", "both")
+VALID_OUTPUTS = ("image", "text", "sound", "both")
+IMAGE_FORMATS = ("bmp", "png", "png-a")
+SOUND_FORMATS = ("wav",)
 DEFAULT_OUTPUT = "image"
 
 
@@ -78,7 +81,10 @@ def create_app(config: Config) -> FastAPI:
         try:
             result = _handle_service(app.state, params)
         except ClientError as exc:
-            return JSONResponse({"status": "error", "message": exc.message}, status_code=400)
+            return JSONResponse(
+                {"status": "error", "error": exc.message, "message": exc.message},
+                status_code=400,
+            )
         except Exception:  # noqa: BLE001
             log.exception("service request failed")
             return JSONResponse(
@@ -129,6 +135,36 @@ async def _request_form(request: Request):
         return await request.form()
 
 
+def _parse_output(value: str) -> set[str]:
+    """Parse RetroArch's comma-separated ``output`` query parameter.
+
+    RetroArch appends formats together with their sub-formats, e.g.
+    ``image,png,png-a`` for image mode, ``text`` for text mode, or
+    ``sound,wav,image,png,png-a`` for image + speech. Returns the requested
+    top-level formats. Image sub-formats are validated but not honored yet
+    (the server always returns a ``bmp`` overlay, which the spec permits as
+    the default).
+    """
+    requested: set[str] = set()
+    for token in value.split(","):
+        token = token.strip().lower()
+        if not token:
+            continue
+        if token == "both":
+            requested.update(("image", "text"))
+        elif token in VALID_OUTPUTS:
+            requested.add(token)
+        elif token in IMAGE_FORMATS or token in SOUND_FORMATS:
+            requested.add("image" if token in IMAGE_FORMATS else "sound")
+        else:
+            raise ClientError(
+                f"'output' must be a comma-separated list of formats, got '{value}'"
+            )
+    if not requested:
+        raise ClientError(f"no known format in 'output' value '{value}'")
+    return requested
+
+
 def _handle_service(state, params: dict) -> dict:
     config: Config = state.config
     pipeline: Pipeline = state.pipeline
@@ -144,8 +180,10 @@ def _handle_service(state, params: dict) -> dict:
         or config.server.default_target
     )
     output = _as_str(params.get("output")) or DEFAULT_OUTPUT
-    if output not in VALID_OUTPUTS:
-        raise ClientError(f"'output' must be one of {VALID_OUTPUTS}, got '{output}'")
+    requested = _parse_output(output)
+
+    if "sound" in requested and not ("image" in requested or "text" in requested):
+        raise ClientError("sound output is not supported; use image or text mode")
 
     frame = load_frame(image_data)
     blocks = pipeline.translate_frame(frame, source_lang, target_lang)
@@ -153,13 +191,13 @@ def _handle_service(state, params: dict) -> dict:
 
     response: dict = {"status": "success", "target_lang": target_lang}
 
-    if output in ("text", "both") and blocks:
+    if "text" in requested and blocks:
         response["text"] = "\n".join(b.translation for b in blocks)
         first = blocks[0].box
         response["text_position"] = [first.x, first.y, first.w, first.h]
         response["text_encoding"] = "utf-8"
 
-    if output in ("image", "both"):
+    if "image" in requested:
         overlay = renderer.render(frame, blocks)
         response["image"] = encode_frame(overlay, fmt="bmp")
         response["image_width"] = overlay.width
@@ -169,6 +207,9 @@ def _handle_service(state, params: dict) -> dict:
 
     if config.server.auto_unpause and _is_paused(params):
         response["press"] = ["unpause"]
+
+    if not any(k in response for k in ("image", "text", "sound", "press")):
+        response["error"] = "No text found."
 
     return response
 

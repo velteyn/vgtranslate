@@ -5,6 +5,7 @@ __pycache__/
 *.ztp
 *.out
 **/screenshots
+!docs/screenshots/
 **/data
 bench-out/
 *.egg-info/

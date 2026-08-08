@@ -22,11 +22,9 @@ vgtranslate ── quality: vision LLM reads + translates the whole frame; Rapid
 
 ## In action
 
-<!--
-  SCREENSHOT SLOT — drop the photo of the translated Retroid screen here.
-  Save it (e.g. docs/screenshots/retroid-overlay.jpg) and point the image path
-  below at it.
--->
+Translated text overlaid on the Retroid screen (Super Robot Taisen Compact 2,
+Beetle WonderSwan core):
+
 ![Translated text overlaid on the Retroid screen](docs/screenshots/retroid-overlay.jpg)
 
 ## Two translation paths

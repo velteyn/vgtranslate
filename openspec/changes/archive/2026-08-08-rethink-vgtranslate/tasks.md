@@ -80,7 +80,7 @@
 
 ## 13. End-to-end validation
 
-- [ ] 13.1 Validate protocol against a real RetroArch instance (pause → translate → overlay aligns at native res, BGR correct)
+- [x] 13.1 Validate protocol against a real RetroArch instance (pause → translate → overlay aligns at native res, BGR correct)
 - [x] 13.2 Validate LM Studio integration end-to-end (quality path on an SRW screenshot)
 - [x] 13.3 Validate fast path (RapidOCR + Sugoi) on CPU
 

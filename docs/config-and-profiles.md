@@ -35,6 +35,7 @@ same file.
       "translator": "openai",
       "upscale": 2,
       "color_isolation": false,
+      "overlay_scale": 3,
       "source_lang": "ja",
       "target_lang": "en",
       "glossary": "default"
@@ -80,6 +81,7 @@ the profile you want served (or switch from the tray app).
 | `translator` | `openai` / `sugoi` / `argos` | `openai` | MT engine. `openai` is frame-capable (used by `quality`). |
 | `upscale` | integer ≥ 1 | `2` | Nearest-neighbor upscale applied before OCR/VLM; boxes are mapped back to native resolution. |
 | `color_isolation` | bool | `false` | High-contrast preprocessing before OCR (occasionally helps noisy frames). |
+| `overlay_scale` | integer ≥ 1 | `3` | Multiple of native resolution at which the translated overlay is rendered. RetroArch stretches the returned image to the whole screen, so rendering at the screen's integer scale keeps text crisp (native-res text gets upscaled and looks soft). |
 | `source_lang` | BCP-47, e.g. `ja` | `ja` | Source language. |
 | `target_lang` | BCP-47, e.g. `en` | `en` | Translation target. |
 | `glossary` | glossary name | `default` | Which glossary to apply for this profile. |
@@ -96,6 +98,7 @@ Example for Megaman (pixel fonts → manga-ocr):
       "translator": "openai",
       "upscale": 4,
       "color_isolation": false,
+      "overlay_scale": 4,
       "source_lang": "ja",
       "target_lang": "en",
       "glossary": "megaman"

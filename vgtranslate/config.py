@@ -113,6 +113,7 @@ class Profile:
     translator: str = "openai"
     upscale: int = 2
     color_isolation: bool = False
+    overlay_scale: int = 3
     source_lang: str = "ja"
     target_lang: str = "en"
     glossary: str = "default"
@@ -122,6 +123,8 @@ class Profile:
             raise ConfigError(f"profile '{self.name}': mode must be 'quality' or 'fast', got '{self.mode}'")
         if self.upscale < 1:
             raise ConfigError(f"profile '{self.name}': upscale must be >= 1")
+        if self.overlay_scale < 1:
+            raise ConfigError(f"profile '{self.name}': overlay_scale must be >= 1")
 
     def to_dict(self) -> dict:
         return {
@@ -130,6 +133,7 @@ class Profile:
             "translator": self.translator,
             "upscale": self.upscale,
             "color_isolation": self.color_isolation,
+            "overlay_scale": self.overlay_scale,
             "source_lang": self.source_lang,
             "target_lang": self.target_lang,
             "glossary": self.glossary,
@@ -144,6 +148,7 @@ class Profile:
             translator=str(data.get("translator", "openai")),
             upscale=int(data.get("upscale", 2)),
             color_isolation=bool(data.get("color_isolation", False)),
+            overlay_scale=int(data.get("overlay_scale", 3)),
             source_lang=str(data.get("source_lang", "ja")),
             target_lang=str(data.get("target_lang", "en")),
             glossary=str(data.get("glossary", "default")),

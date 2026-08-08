@@ -28,7 +28,7 @@ from fastapi.responses import JSONResponse
 from PIL import Image
 
 from .config import Config
-from .imaging import OverlayRenderer, encode_frame, load_frame
+from .imaging import OverlayRenderer, encode_frame, load_frame, render_overlay
 from .mt import list_providers as list_mt_providers
 from .ocr import list_providers as list_ocr_providers
 from .pipeline import Pipeline
@@ -216,7 +216,9 @@ def _handle_service(state, params: dict) -> dict:
         response["text_encoding"] = "utf-8"
 
     if "image" in requested:
-        overlay = renderer.render(frame, blocks)
+        overlay = render_overlay(
+            frame, blocks, scale=max(1, config.active().overlay_scale), renderer=renderer
+        )
         response["image"] = encode_frame(overlay, fmt="bmp")
         response["image_width"] = overlay.width
         response["image_height"] = overlay.height

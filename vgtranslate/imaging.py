@@ -256,3 +256,39 @@ class OverlayRenderer:
                     anchor="lt",
                 )
         return out
+
+
+def render_overlay(
+    frame: Image.Image,
+    blocks: list[Block],
+    scale: int = 1,
+    renderer: Optional[OverlayRenderer] = None,
+) -> Image.Image:
+    """Render translations over ``frame`` at ``scale``x native resolution.
+
+    RetroArch stretches the returned overlay to fill the whole screen, so
+    native-resolution text gets upscaled and looks soft. Rendering at a higher
+    multiple (``scale``) makes the text crisp instead: RetroArch then samples it
+    at 1:1 or downscales it.
+    """
+    renderer = renderer or OverlayRenderer()
+    if scale <= 1:
+        return renderer.render(frame, blocks)
+    render_frame = upscale_nearest(frame, scale)
+    scaled_blocks = [
+        Block(
+            box=block.box.scaled(scale).clamped(
+                render_frame.width, render_frame.height
+            ),
+            source_text=block.source_text,
+            translation=block.translation,
+            confidence=block.confidence,
+            target_lang=block.target_lang,
+            source_lang=block.source_lang,
+            order=block.order,
+        )
+        if block.box
+        else block
+        for block in blocks
+    ]
+    return renderer.render(render_frame, scaled_blocks)

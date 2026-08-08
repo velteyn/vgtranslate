@@ -123,24 +123,72 @@ For a tray icon instead of a terminal (Windows/Linux): `vgtranslate tray`.
 
 ## 4. Configure RetroArch
 
-RetroArch has a built-in **AI Service** feature:
+RetroArch has a built-in **AI Service** feature. It pauses the game, POSTs the
+current frame to the URL you configure, and renders the overlay vgtranslate
+returns. **You need RetroArch v1.18.0+** — official builds only ship the AI
+Service from then on (the stock 1.9.x–1.17.x APKs don't include it at all;
+only custom/modded builds do).
 
-1. **Settings → AI Service**, or the `AI Service` entry under the quick menu.
-2. Set **AI Service URL** to `http://localhost:4404/`.
-3. Enable the AI Service (start it from the menu).
-4. Pause the game with the configured pause key (AI Service binds to a key;
-   often `F1`). vgtranslate receives the frame, translates it, and RetroArch
-   shows the overlay on top.
+> Tested on: RetroArch 1.22.2 (Android, Retroid Pocket) + Beetle WonderSwan core.
 
-Notes:
+### 4a. Find the AI Service menu
 
-- The overlay is returned at native resolution as 24-bit BGR BMP, so it aligns
-  exactly with the game frame.
-- Output mode defaults to `output=image` (a full overlay). If you prefer to feed
-  RetroArch's built-in text rendering, configure the output mode in RetroArch;
-  the server also honors `output=text`.
-- Each request can take several seconds on the quality path — fine for
-  turn-based / pause-driven games. RetroArch stays paused while waiting.
+Where the menu lives depends on the build and platform:
+
+- **Android (Retroid/handheld) — v1.18.0+:** the AI Service menu is hidden under
+  **Settings → Accessibility**. First toggle **Accessibility → Enable
+  Accessibility** ON (this also powers the spoken/Speech mode), then the
+  **AI Service** entry appears inside Accessibility.
+- **Windows/desktop — v1.18.0+:** **Settings → AI Service** (also under the
+  quick menu while a game runs).
+- **Old modded 1.9.x-era builds:** the AI overlay is drawn by the on-screen
+  widgets, so both **Settings → On-Screen Display → On-Screen Notifications →
+  On-Screen Notifications** and **Graphics Widgets** must be ON, or the overlay
+  is never drawn even though translation succeeds.
+
+### 4b. Settings to apply
+
+1. **AI Service → AI Service Enable** — **ON** (if it's off, the hotkey does
+   nothing, not even pause).
+2. **AI Service URL** — the server URL **with the trailing slash**:
+   - On the device running vgtranslate: `http://localhost:4404/`
+   - From a handheld on the same network: `http://<PC-LAN-IP>:4404/` — e.g.
+     `http://192.168.1.242:4404/`. Use the IP the server printed at startup
+     ("AI Service URL: http://192.168.1.242:4404/"). The server binds
+     `0.0.0.0` by default so the handheld can reach it; allow TCP port `4404`
+     through the Windows firewall.
+3. **AI Service Mode** — set to **Image** so RetroArch renders the translated
+   overlay (it sends `output=image,png,png-a`). Speech/TTS mode reads text
+   aloud via Accessibility instead.
+4. **AI Service Pause** — **ON** (default). First press of the hotkey pauses
+   the game and triggers translation; a second press unpauses. Turn it off if
+   you'd rather the game keeps running (Speech mode).
+5. **AI Service Source/Target Language** — optional; if left as "Don't care"
+   the profile defaults in vgtranslate apply (`ja` → `en`).
+6. **Hotkey**: **Settings → Hotkeys → AI Service** — bind a key or pad button
+   (e.g. `Select`). On a handheld, binding it to a controller button is
+   easiest. This hotkey, not the pause key, triggers translation.
+
+### 4c. Expected behavior
+
+- Pressing the AI Service hotkey pauses the game and a request reaches the
+  server (watch the server terminal). The translated overlay is drawn over the
+  paused frame.
+- The overlay is returned as a 24-bit BGR BMP at a higher resolution
+  (`overlay_scale`, default 3×) so RetroArch renders crisp text when it
+  stretches the image to the full screen.
+- Each request takes a few seconds on the quality path — fine for
+  turn-based / pause-driven games.
+- If nothing appears in the server log when you press the hotkey, re-enter the
+  AI Service URL (a stale/empty URL silently aborts the request) and confirm
+  the enable toggle and hotkey are set.
+
+### 4d. Text looks soft / low-res
+
+That's RetroArch upscaling native-resolution text to the full screen. Raise
+`overlay_scale` for the active profile in the config (e.g. `4`); the server
+then renders the overlay at a higher multiple and RetroArch samples it 1:1 or
+downscales — always crisp. See [config-and-profiles.md](config-and-profiles.md).
 
 ## 5. Benchmark (engine selection)
 

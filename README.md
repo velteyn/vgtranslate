@@ -5,8 +5,9 @@ English overlay, powered entirely by free software running on your own machine.
 
 It implements the [libretro AI Service wire protocol](https://docs.libretro.com/guides/ai-service/)
 on `http://localhost:4404`. RetroArch pauses the game, POSTs a screenshot of the
-current frame, and vgtranslate returns a translated overlay at native resolution
-(24-bit BGR BMP by default) that RetroArch renders on top of the original.
+current frame, and vgtranslate returns a translated overlay (24-bit BGR BMP, by
+default rendered at a multiple of native resolution so it stays crisp on screen)
+that RetroArch renders on top of the original.
 
 ```
 RetroArch (paused frame)
@@ -18,6 +19,15 @@ vgtranslate ── quality: vision LLM reads + translates the whole frame; Rapid
             ▼
    { image: <overlay BMP>, image_width, image_height, image_format, ... }
 ```
+
+## In action
+
+<!--
+  SCREENSHOT SLOT — drop the photo of the translated Retroid screen here.
+  Save it (e.g. docs/screenshots/retroid-overlay.jpg) and point the image path
+  below at it.
+-->
+![Translated text overlaid on the Retroid screen](docs/screenshots/retroid-overlay.jpg)
 
 ## Two translation paths
 
@@ -76,9 +86,13 @@ vgtranslate serve --detect-llm
 The Windows scripts run the same CLI under the hood; manually that is
 `.venv\Scripts\python -m vgtranslate serve --detect-llm`.
 
-In RetroArch: **Settings → AI Service**, enable it and set **AI Service URL** to
-`http://localhost:4404/`. Pause the game (default `F1`... consult your keybinds),
-and the overlay appears.
+In RetroArch (v1.18.0+): **Settings → AI Service** on desktop, or **Settings →
+Accessibility → AI Service** on Android after enabling **Accessibility**. Turn
+the service **ON**, set **AI Service URL** to `http://<PC-LAN-IP>:4404/` (use
+the IP printed at server startup — the server binds `0.0.0.0`), set **AI
+Service Mode** to **Image**, and bind the **AI Service hotkey** (Settings →
+Hotkeys). Press it in-game to pause, translate, and show the overlay. Full
+walkthrough: [docs/install-and-run.md](docs/install-and-run.md).
 
 Run `vgtranslate status` to see which engines are available on your machine.
 

@@ -95,6 +95,15 @@ def create_app(config: Config) -> FastAPI:
     return app
 
 
+def _json_dict(raw: bytes) -> Optional[dict]:
+    """Parse ``raw`` as a JSON object, or return None when it isn't one."""
+    try:
+        body = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return None
+    return body if isinstance(body, dict) else None
+
+
 async def _collect_params(request: Request) -> dict:
     params = {k: v for k, v in request.query_params.items()}
     content_type = request.headers.get("content-type", "").lower()
@@ -106,18 +115,27 @@ async def _collect_params(request: Request) -> dict:
         elif content_type.startswith("multipart/form-data"):
             form = await _request_form(request)
             params.update({str(k): v for k, v in form.items()})
-        elif content_type.startswith("application/x-www-form-urlencoded"):
-            form = await _request_form(request)
-            params.update({str(k): v for k, v in form.items()})
+        else:
+            # RetroArch posts its JSON payload with Content-Type
+            # application/x-www-form-urlencoded (libretro's net_http.c sets
+            # that for any POST without an explicit type). Try JSON first,
+            # then a plain form parse, then treat the body as the image.
+            raw = await request.body()
+            body = _json_dict(raw)
+            if body is not None:
+                params.update({str(k): v for k, v in body.items()})
+            elif content_type.startswith("application/x-www-form-urlencoded"):
+                form = await _request_form(request)
+                params.update({str(k): v for k, v in form.items()})
+            elif raw:
+                params["image"] = raw.decode("utf-8", errors="ignore")
     except Exception:  # noqa: BLE001
         raw = await request.body()
-        if raw:
-            try:
-                body = json.loads(raw.decode("utf-8"))
-                if isinstance(body, dict):
-                    params.update({str(k): v for k, v in body.items()})
-            except (ValueError, UnicodeDecodeError):
-                params["image"] = raw.decode("utf-8", errors="ignore")
+        body = _json_dict(raw) if raw else None
+        if body is not None:
+            params.update({str(k): v for k, v in body.items()})
+        elif raw:
+            params["image"] = raw.decode("utf-8", errors="ignore")
     return params
 
 
